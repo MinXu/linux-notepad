@@ -1,0 +1,7 @@
+#define PRI_MESSAGE(format,arg...)  {
+
+	　　　　　　　　　　　　fprintf(stderr,"<file=%s>  <func=%s>  <line=%d>::   ",__FILE__,__FUNCTION__,__LINE__);/
+
+	　　　　　　　　　　　　fprintf(stderr,format,##arg);/
+
+	　　　　　　　　}

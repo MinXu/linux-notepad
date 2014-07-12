@@ -1,0 +1,52 @@
+1、首先安装 samba
+        sudo apt-get install samba 
+        sudo apt-get install smbfs
+2、创建一个文件夹，这个文件夹就是用来共享、传递、读写文件内容的地方。
+        mkdir -p /home/cxw/share
+        chmod 777 /home/cxw/share
+        这里假设你的共享文件夹是在用户主目录下的share目录。
+3、配置samba的配置文件smb.conf, 对配置文件做个backup。
+        sudo cp /etc/samba/smb.conf /etc/samba/smb.conf_backup 
+        sudo vim /etc/samba/smb.conf
+        下面请注意在以下几处动刀子。
+        (1)请搜索查找到 #security = user的地方，然后以下面这几行取代
+        security = user(前面有#号去掉)
+        username map = /etc/samba/smbusers
+        这是Samba 服务器的安全模式，有5种安全模式：Share、User、Server、Domain和Ads。用来适应不同的企业服务器需求，默认情况下为User。
+        (2)同样请搜寻到［global］把 workgroup = MSHOME 改成
+        workgroup = WORKGROUP
+        display charset = UTF-8
+        unix charset = UTF-8
+        dos charset = cp936 
+		后面三行是为了防止出现中文目录乱码的情况。
+        (3)接着请跳到配置文件下的最后一行(命令模式下，按G)将下列几行新增到文件的最后面，假设允许访问的用户为：cxw。而文件夹的共享名为第二步设置的/home/cxw/share:
+        [Share]
+        comment = Shared Folder with username and password (注释信息)
+        path = /home/cxw/share     (我自己用一般设置为path =  / 便是整个根目录)
+        # public = yes (允许匿名访问)
+        writable = yes  (可写)
+        # readyonly =  yes (只读)
+        valid users = cxw    (用户名，设备可访问组可用valid users =@组名)
+        create mask = 0700
+        directory mask = 0700
+        force user = nobody
+        force group = nogroup
+        available = yes
+        browseable = yes (表示可见隐藏)
+        (4)现在要添加cxw这个网络访问帐户。如果系统中当前没有这个帐户，那么注意这边的用户添加请使用下述命令：（假设用户为cxw，密码为123456）
+        sudo useradd cxw 
+        要注意，上面只是增加了cxw这个用户，却没有给用户赋予本机登录密码。所以这个用户将只能从远程访问，不能从本机登录。而且samba的登录密码可以和本机登录密码不一样。
+        现在要新增网络使用者的帐号： 
+        sudo smbpasswd -a cxw
+        sudo vim /etc/samba/smbusers
+        在新建立的文件内加入下面这一行并保存
+        cxw = "network username"
+        (5)测试并启动samba
+        sudo testparm
+        注意老的命令用不了啦
+        sudo /etc/init.d/samba restart
+        肯定会提示sudo: /etc/init.d/samba: command not found
+        请使用下面的命令：
+        sudo service smbd restart
+        sudo service nmbd restart
+

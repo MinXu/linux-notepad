@@ -1,0 +1,19 @@
+1，列出某个IP地址所提供的共享文件夹
+	smbclient -L 198.168.0.1 -U username%password
+2,像FTP客户端一样使用smbclient
+	smbclient //192.168.0.1/tmp  -U username%password
+3,直接一次性使用smbclient命令
+	smbclient -c 'ls'  //192.168.0.1/tmp  -U username%password
+和
+	smbclient //192.168.0.1/tmp  -U username%password
+	smb:\>ls
+4，除了使用smbclient，还可以通过mount和smbcount挂载远程共享文件夹
+	mount –t smbfs[cifs] [–o option] //IP<or [NETBIOS名称]>/共享资源名     /本地挂接点来实现同样的功能。
+	smbmount //IP<or [NETBIOS名称]>/共享资源名      /本地挂接点      [-o option]
+eg.
+	mount -t smbfs -o  username=administrator,password=123456 //192.168.0.1/tmp /mnt/tmp
+	smbmount //192.168.0.1/tmp /mnt/tmp -o username=administrator
+常用的的option:
+	username=<用户名]>，password=<密码>，guest（指定为用guest访问，不用提
+	供密码，前面的即使用username=guest参数的话也会要求输入密码），ro（有时候为了系统安全要指定为只读模式），rw，同时多个 option的话用逗号隔开。
+
