@@ -1,0 +1,1 @@
+for i in `find ./ -name "*.ogv"`;do mencoder $i -nosound -ovc lavc -o $i.avi ;done
