@@ -1,0 +1,13 @@
+sudo sh -c "echo \"
+deb http://mirrors.163.com/ubuntu/ $(lsb_release -cs) main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-security main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-updates main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-proposed main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-backports main restricted universe multiverse
+
+deb-src http://mirrors.163.com/ubuntu/ $(lsb_release -cs) main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-security main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-updates main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-proposed main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ $(lsb_release -cs)-backports main restricted universe multiverse
+\" > /etc/apt/sources.list"; sudo apt-get clean; sudo apt-get update;
