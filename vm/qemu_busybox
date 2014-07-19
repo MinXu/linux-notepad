@@ -1,0 +1,112 @@
+						Busybox build the rootfs
+==========================================================Download===========================================================================
+#利用git版本管理系统，下载linux内核源码.
+git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git
+
+#利用git版本管理系统,下载busybox源码
+git clone git://busybox.net/busybox.git
+
+==========================================================Make Menuconfig====================================================================
+#busybox编译、裁剪
+    1.make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- defconfig    
+    2.make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- menuconfig
+        a.选择上静态编译。
+        b.Busybox Library Tuning  --->
+             [*]     Username completion                              
+             [*]   Fancy shell prompts
+        这两项必须选上，不然BusyBox将无法识别环境变量PS1里的参数。
+    3.make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- install
+
+==========================================================Built up===========================================================================
+#创建磁盘镜像
+dd if=/dev/zero of=rootfs.img bs=1M count=20
+
+#格式化磁盘
+mkfs.ext3 rootfs.img
+
+#创建rootfs目录,用来挂载rootfs.img
+mkdir rootfs
+
+#挂载rootfs.img
+sudo mount -o loop rootfs.img rootfs
+
+#将busybox生成的_install目录下的内容全部copy到rootfs目录下.
+#这其实就是所谓的根文件系统
+cp -rv ./busybox/_install/* ./rootfs
+
+#创建根文件系统
+    mkdir -v {dev,proc,sys,etc,lib,tmp,bin,sbin,usr}
+    mkdir -v usr/include
+    mkdir -v usr/lib
+    chmod 1777 tmp
+
+#添加两个必要的结点
+    sudo mknod -m 600 dev/console c 5 1
+    sudo mknod -m 666 dev/null c 1 3
+    sudo mknod -m 666 dev/ram b 1 0     
+    在etc/下创建文件：hostname、init.d/rcS、inittab、profile
+
+#/etc/inittab
+   # System initialization.
+   #/etc/inittab
+   ::sysinit:/etc/init.d/rcS
+   ::askfirst:-/bin/sh
+   ::ctrlaltdel:/sbin/reboot
+   ::shutdown:/bin/umount -a -r
+
+#添加mdev支持
+#在rcS中添加：
+    mount -t sysfs sysfs /sys
+    mount -t proc none /proc
+    sysctl -w kernel.hotplug=/sbin/mdev
+    mdev -s
+
+#Compress
+   umount rootfs
+   gzip -9 initrd.img 
+
+
+==========================================================Run OS========================================================================
+#启动qemu,同时装载刚才生成的根文件系统及内核文件
+    qemu -hda ./rootfs.img -kernel ./bzImage -append "root=/dev/sda"
+    qemu-system-arm -M versatilepb -kernel linux-source/linux/arch/arm/boot/zImage -initrd initrd.img.gz -append root="/dev/ram0 rw"
+
+
+
+
+==========================================================NFS===========================================================================
+#ubunut下添加nfs的支持
+    /etc/exports添加：
+        /home/xxxxx/root *(rw,sync,no_root_squash)
+#重新启动nfs：
+    sudo /etc/init.d/nfs-kernel-server  restart
+
+
+
+
+==========================================================Other Run=====================================================================
+#七、qemu启动arm-linux系统
+#    1.添加qemu的启动脚本：qemu-ifup 
+    #!/bin/sh
+    echo "Executing /etc/qemu-ifup"
+    #echo "Bringing up $1 for bridged mode..."
+    sudo ifconfig $1 10.0.0.1
+    #echo "Adding $1 to br0..."
+    #sudo /usr/sbin/brctl addif br0 $1
+    #sleep 2
+#    2.运行qemu：
+    sudo qemu-system-arm -M versatilepb -kernel zImage /
+        -append root="/dev/nfs nfsroot=10.0.0.1: /home/xxxxx/root rw /
+        ip=10.0.0.2:10.0.0.1:10.0.0.1:255.255.255.0" -net nic,vlan=0 /
+        -net tap,vlan=0,ifname=tap0,script=./qemu-ifup
+
+ 
+
+#八、令arm-linux可以用nat方式上网
+#    1.主机端设置iptables：
+    echo 1 > /proc/sys/net/ipv4/ip_forward
+    iptables -t nat -A POSTROUTING -o eth1 -s 10.0.0.1/24 -j MASQUERADE
+#    2.arm-linux系统添加文件/etc/resolv.conf指定dns服务器：
+    nameserver 192.168.1.1
+
+=========================================================End===========================================================================
