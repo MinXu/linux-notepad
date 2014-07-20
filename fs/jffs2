@@ -1,0 +1,18 @@
+				        Jffs2 file system(nand flash)
+====================================================Install=================================================
+sudo apt-get install mtd-utils
+
+====================================================Install=================================================
+mkfs.jffs2 -e 0x10000 --pad=0x200000 -l -d rootfs -o jffs2.bin
+
+====================================================Install=================================================
+Options:
+  -p, --pad[=SIZE]        Pad output to SIZE bytes with 0xFF. If SIZE is
+                          not specified, the output is padded to the end of
+                          the final erase block
+  -r, -d, --root=DIR      Build file system from directory DIR (default: cwd)
+                          Set according to target system's memory management
+                          page size (default: 4KiB)
+  -e, --eraseblock=SIZE   Use erase block size SIZE (default: 64KiB)
+  -o, --output=FILE       Output to FILE (default: stdout)
+  -l, --little-endian     Create a little-endian filesystem
