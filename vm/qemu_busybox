@@ -10,11 +10,29 @@ git clone git://busybox.net/busybox.git
 #busybox编译、裁剪
     1.make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- defconfig    
     2.make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- menuconfig
-        a.选择上静态编译。
+        #选择上静态编译。
+ 	a.Busybox Settings  ---> 
+    	     Build Options  ---> 
+                 [*] Build BusyBox as a static binary (no shared libs)  
         b.Busybox Library Tuning  --->
              [*]     Username completion                              
              [*]   Fancy shell prompts
-        这两项必须选上，不然BusyBox将无法识别环境变量PS1里的参数。
+        #这两项必须选上，不然BusyBox将无法识别环境变量PS1里的参数。 
+	c.Busybox Settings  ---> 
+             Build Options  ---> 
+                 ()  Cross Compiler prefix  
+        d.Linux System Utilities  ---> 
+             [*] mdev
+             [*]   Support /etc/mdev.conf    
+             [*]     Support command execution at device addition/removal 
+             [*] mount 
+             [*]   Support mounting NFS file systems 
+             [*] umount                                                           
+             [*]   Support option -a
+	e.支持Initttab。
+	Init Utilities  ---> 
+    	     [*]   Support reading an inittab file 
+#以上这些选项默认都是选择的。
     3.make ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabi- install
 
 ==========================================================Built up===========================================================================
@@ -34,10 +52,18 @@ sudo mount -o loop rootfs.img rootfs
 #这其实就是所谓的根文件系统
 cp -rv ./busybox/_install/* ./rootfs
 
+#安装glibc库到咱们的文件夹下(not statistic mode)
+cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/  
+
 #创建根文件系统
-    mkdir -v {dev,proc,sys,etc,lib,tmp,bin,sbin,usr}
+    mkdir -v {dev,proc,sys,etc,lib,tmp,bin,sbin,usr,var,run,root,home,srv,opt,mnt}
     mkdir -v usr/include
     mkdir -v usr/lib
+    mkdir -v home/min
+    mkdir -v var/log
+    mkdir -v var/lib
+    cd var
+    ln -s ../run run
     chmod 1777 tmp
 
 #添加两个必要的结点
@@ -46,20 +72,159 @@ cp -rv ./busybox/_install/* ./rootfs
     sudo mknod -m 666 dev/ram b 1 0     
     在etc/下创建文件：hostname、init.d/rcS、inittab、profile
 
+#在启动过程中bootloader会传递参数init=/linuxrc给内核的main( )函数，所以在文件系统被挂载后，运行的第一个程序是linuxrc，而linuxrc是一个指向/bin/busybox的链接文件，也就是说文件系统被挂在后运行的第一个程序是busybox。Busybox首先会解析文件/etc/inittab，这个文件中存放的是系统的配置信息，这些配置信息指明了接下来将要启动那些程序。
 #/etc/inittab
-   # System initialization.
-   #/etc/inittab
-   ::sysinit:/etc/init.d/rcS
-   ::askfirst:-/bin/sh
-   ::ctrlaltdel:/sbin/reboot
-   ::shutdown:/bin/umount -a -r
+#<id>:<runlevels>:<action>:<process>
+#<id>:表示这个进程要使用的控制台（即标准输入、标准输出、标准错误设备）。如果省 略，则使用与init进程一样的控制台。
+#<runlevels>:对于Busybox init程序，这个字段滑意义，可以省略。
+#<action>:表示init程序如何控制这个子进程，
+#<process>: 要执行的程序，它可以是可执行程序，也可以是脚本
+    # System initialization.
+    #/etc/inittab
+    ::sysinit:/etc/init.d/rcS
+    #auto restart the action(/bin/sh), if the action stop;
+    ::respawn:-/bin/sh
+    #tty2::askfirst:-/bin/sh
+    ::restart:/sbin/init
+    ::ctrlaltdel:/bin/umount -a -r
+    ::ctrlaltdel:/sbin/reboot
+    ::shutdown:/bin/umount -a -r
+    ::shutdown:/sbin/swapoff –a 
+
+#/etc/network
+    touch if-down.d if-post-down.d if-pre-up.d if-up.d
+    #1） 在启动脚本～/rootfs/etc/init.d/rcS添加
+    ifup -a
+    #2） 添加一个配置文件～/rootfs/etc/network/interfaces:
+    auto lo
+    iface lo inet loopback
+
+    auto eth0
+    iface eth0 inet static
+    address 192.168.0.10
+    netmask 255.255.255.0
+    gateway 192.168.0.1
+
+#fstab
+    #<file name> <mount point> <type> <options> <dump> <pass>
+    proc /proc proc defaults 0 0
+    #none /tmp ramfs defaults 0 0
+    #mdev /dev ramfs defaults 0 0
+    sysfs /sys sysfs defaults 0 0
+    tmpfs /tmp tmpfs defaults 0 0
+    tmpfs /dev tmpfs defaults 0 0
 
 #添加mdev支持
+#执行命令：vim mdev.conf 创建mdev.conf。前边已经介绍mdev是一个udev的简化版本，主要用来支持一些热插拔设备。我们可以通过文件mdev.conf自定义一些设备节点的名称或链接来满足特定的需要，但在此处让它为空。
+    touch etc/mdev.conf
+
+
+#hostname file name
+    echo "WorkStation"> etc/hostname
+
+
 #在rcS中添加：
-    mount -t sysfs sysfs /sys
-    mount -t proc none /proc
-    sysctl -w kernel.hotplug=/sbin/mdev
+    #!/bin/sh
+
+    #shell命令的搜索路径        
+    PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+    #运行在单用户模式
+    runlevel=S
+
+    #前一个级别，为N则表示没有前一个级别
+    prevlevel=N
+ 
+    #权限位掩码
+    umask 022 
+  
+    #将环境的变量导出到环境中
+    export PATH runlevel prevlevel
+    
+    #将文件 /etc/fstab 中指明的文件挂载到对应的挂载点上
+    mount -a
+
+    #当有热插拔事件产生时， 内核就会调用位于/sbin目录的 mdev。 这时 mdev通过环境变量中的 ACTION 和 DEVPATH，（这两个变量是系统自带的）来确定此次热插拔事件的动作以及影响了/sys 中的那个目录。接着会看看这个目录中是否有“dev”的属性文件，如果有就利用这些信息为 这个设备在/dev 下创建设备节点文件。
+    #sysctl -w kernel.hotplug=/sbin/mdev
+    echo /sbin/mdev>/proc/sys/kernel/hotplug  
+
+    #建立dev目录。以‘-s’为参数调用位于/sbin 目录写的 mdev（其实是个链接，作用是传递参数给/bin目录下的busybox 程序并调用它） ，mdev扫描 /sys/class和/sys/block中所有的类设备目录，如果在目录中含有名为“dev”的文件，且文件中包含的是设备号，则 mdev 就利用这些信息为这个设备在/dev下创建设备节点文件。一般只在启动时才执行一次  “mdev -s” 。
     mdev -s
+ 
+    ifup -a
+    hwclock --hctosys
+
+    #create pts directory for remote login such as SSH and telnet
+    mkdir -p /dev/pts
+    mount -t devpts devpts /dev/pts   
+
+    if [ -f /etc/hostname ]; then
+        /bin/hostname -F /etc/hostname
+    fi
+
+    if [ -e /sys/class/net/eth0 ]; then 
+        ifconfig eth0 192.168.1.15
+    fi
+
+    #chmod +x rcS
+
+#系统时钟
+#1） 将主机上的时区文件拷贝到开发板根文件系统
+    cp /etc/localtime ~/rootfs/etc
+#2） 在启动脚本～/rootfs/etc/init.d/rcS中添加一条命令
+    hwclock --hctosys
+
+
+#passwd shadow group
+    vim passwd 
+        root:x:0:0:root:/root:/bin/bash
+        min:x:1000:1000:min,,,:/home/min:/bin/bash
+    vim shadow 
+	root:$6$M5bVYRqO$u76nuUglqn4Sw11C15yOm1/gTKDi7SQ523AGSNvDIUefK/z7pi5FNQDhIzIYV2X2PmTdS86vFMIgCkiaK5dRc.:16271:0:99999:7:::
+	min:$6$QsnIEWlB$PKNTzNw0Puw.UqVPSC9NJK07IOgDdu1S4LKKFj7QRobM15ubh//NPv.jwO9/dYuCTynu6p/0qB.VwV54TSabS.:16268:0:99999:7:::
+    vim group 
+	root:x:0:
+	sudo:x:27:min
+	min:x:1000:
+
+
+#profile $PS1
+	#/etc/profile:system-wide.profile filefor the Bourne shells
+
+	echo "Processing /etc/profile"
+	# no-op
+
+	# Set search library path
+	echo " Set search library path"
+	export LD_LIBRARY_PATH=/lib:/usr/lib
+
+	# Set user path
+	echo " Set user path"
+	PATH=/bin:/sbin:/usr/bin:/usr/sbin
+	export PATH
+
+	USER="`id -un`"
+	LOGNAME=$USER
+	export USER LOGNAME
+
+	# Set PS1
+	echo " Set PS1"
+	HOSTNAME=`/bin/hostname`
+	# 此处让shell提示符显示host名称的。是`，不是’，要注意
+	# 会在进入根系统后显示Jacky
+	
+	ulimit -S -c 0 > /dev/null 2>&1
+	export PS1='\\e[32m[\u@\h  \\W]# \\e[00;37m ' 
+	#export PS1="\\e[32m[$USER@$HOSTNAME \\w\\a]\\$\\e[00;37m "
+	# 此处\\e[32m是让后面的“[$USER@$HOSTNAME \\w\\a]”显示为绿色
+	# \\e[00是关闭效果
+	# \\e[05是闪烁
+	# 37m是让后面的显示为白色
+	# 多个命令可以；号隔开
+
+
+	echo "All done!"
+	echo
 
 #Compress
    umount rootfs
@@ -109,4 +274,22 @@ cp -rv ./busybox/_install/* ./rootfs
 #    2.arm-linux系统添加文件/etc/resolv.conf指定dns服务器：
     nameserver 192.168.1.1
 
+=========================================================Download to broad==============================================================
+#烧写内核文件uImage
+   #先后执行命令：
+   tftp 0x30008000 uImage
+   nand erase 0x80000 0x500000
+   nand write 0x30008000 0x80000 0x500000 
+
+#烧写yaffs2映像文件
+   #先后执行命令：
+   tftp 0x30008000 rootfs.yaffs2
+   nand erase 0x580000 7a80000
+   nand write.yaffs 0x30008000 0x580000 dbb040
+
+#设置内核参数
+   #先后执行命令：
+   setenv bootargs "noinitrd root=/dev/mtdblock3 rootfstyle=yaffs2 console=ttySAC0,115200 init=/linuxrc mem=64M"
+   setenv bootcmd "nand read 0x30008000 0x80000 0x500000;bootm 0x30008000" 
+   saveenv
 =========================================================End===========================================================================
