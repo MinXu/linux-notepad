@@ -1,0 +1,26 @@
+=======================================bridge cmd (tap0)============================================
+1. #设置tun设备权限
+        su
+        chown root.usergroup /dev/net/tun
+        chmod g+rw /dev/net/tun
+
+2. #添加网桥br0
+        brctl addbr br0
+        ifconfig eth0 0.0.0.0 promisc
+        brctl addif br0 eth0
+        dhclient br0
+
+3. # 创建tap0
+        apt-get install uml-utilities
+        tunctl -t tap0 -u username
+
+4. # 启动tap0
+        brctl addif br0 tap0
+        ifconfig tap0 up
+
+5. #查看可用的虚拟网卡
+        qemu-system-i386 -net nic,model=?
+        可以看到: Supported NIC models: ne2k_pci,i82551,i82557b,i82559er,rtl8139,8.e1000,pcnet,virtio
+
+6. #退出root后以网桥模式启动
+        qemu-system-i386 ./winxp_sp2.img.img -net nic,model=rtl8139 -net tap
