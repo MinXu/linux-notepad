@@ -107,10 +107,10 @@ cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/
 
 
 #拷贝网络驱动模块到rootfs：
-	cp e1000.ko /lib/module/`uname -r`/kernel/intel/
+    cp e1000.ko /lib/module/`uname -r`/kernel/intel/
 
 #在rcS中insmod 网卡驱动：
-	sudo insmod /lib/module/`uname -r`/kernel/intel/e1000.ko
+    sudo insmod /lib/module/`uname -r`/kernel/intel/e1000.ko
 
 
 #fstab
@@ -151,6 +151,8 @@ cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/
     
     #将文件 /etc/fstab 中指明的文件挂载到对应的挂载点上
     mount -a
+    
+    sudo insmod /lib/module/`uname -r`/kernel/intel/e1000.ko
 
     #当有热插拔事件产生时， 内核就会调用位于/sbin目录的 mdev。 这时 mdev通过环境变量中的 ACTION 和 DEVPATH，（这两个变量是系统自带的）来确定此次热插拔事件的动作以及影响了/sys 中的那个目录。接着会看看这个目录中是否有“dev”的属性文件，如果有就利用这些信息为 这个设备在/dev 下创建设备节点文件。
     #sysctl -w kernel.hotplug=/sbin/mdev
@@ -170,7 +172,6 @@ cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/
         /bin/hostname -F /etc/hostname
     fi
 
-	sudo insmod /lib/module/`uname -r`/kernel/intel/e1000.ko
 
 #	if [ -e /sys/class/net/eth0 ]; then
 #        ifconfig eth0 192.168.1.15
