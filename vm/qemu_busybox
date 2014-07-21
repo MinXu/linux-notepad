@@ -92,7 +92,7 @@ cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/
     ::shutdown:/sbin/swapoff –a 
 
 #/etc/network
-    touch if-down.d if-post-down.d if-pre-up.d if-up.d
+    mkdir if-down.d if-post-down.d if-pre-up.d if-up.d run
     #1） 在启动脚本～/rootfs/etc/init.d/rcS添加
     ifup -a
     #2） 添加一个配置文件～/rootfs/etc/network/interfaces:
@@ -104,6 +104,14 @@ cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/
     address 192.168.0.10
     netmask 255.255.255.0
     gateway 192.168.0.1
+
+
+#拷贝网络驱动模块到rootfs：
+	cp e1000.ko /lib/module/`uname -r`/kernel/intel/
+
+#在rcS中insmod 网卡驱动：
+	sudo insmod /lib/module/`uname -r`/kernel/intel/e1000.ko
+
 
 #fstab
     #<file name> <mount point> <type> <options> <dump> <pass>
@@ -150,21 +158,23 @@ cp gcc-3.4.5-glibc-2.3.6/arm-linux/lib/*.so* rootfs/lib/
 
     #建立dev目录。以‘-s’为参数调用位于/sbin 目录写的 mdev（其实是个链接，作用是传递参数给/bin目录下的busybox 程序并调用它） ，mdev扫描 /sys/class和/sys/block中所有的类设备目录，如果在目录中含有名为“dev”的文件，且文件中包含的是设备号，则 mdev 就利用这些信息为这个设备在/dev下创建设备节点文件。一般只在启动时才执行一次  “mdev -s” 。
     mdev -s
- 
+
     ifup -a
     hwclock --hctosys
 
     #create pts directory for remote login such as SSH and telnet
     mkdir -p /dev/pts
-    mount -t devpts devpts /dev/pts   
+    mount -t devpts devpts /dev/pts
 
     if [ -f /etc/hostname ]; then
         /bin/hostname -F /etc/hostname
     fi
 
-    if [ -e /sys/class/net/eth0 ]; then 
-        ifconfig eth0 192.168.1.15
-    fi
+	sudo insmod /lib/module/`uname -r`/kernel/intel/e1000.ko
+
+#	if [ -e /sys/class/net/eth0 ]; then
+#        ifconfig eth0 192.168.1.15
+#    fi
 
     #chmod +x rcS
 
