@@ -1,5 +1,5 @@
-转自: http://blog.csdn.net/tjhd1989/article/details/8248024
------------------------------分割线-------------------------------------
+#转自: http://blog.csdn.net/tjhd1989/article/details/8248024
+#-----------------------------分割线-----Install-Tools-------------------------------
 1. jimmy@ubuntu:~$ grep '(vmx|svm)' /proc/cpuinfo
 	查看cpu是否支持虚拟化，不支持也可以使用qemu，只不过没有qemu-kvm加速
 
@@ -7,6 +7,7 @@
 	ubuntu 12.04对应的版本为1.0，默认kvm加速模块也安装好了
 
 
+#-----------------------------分割线-----Install-Vm system----------------1. no bridge---------------
 3. jimmy@ubuntu:~$ mkdir images
 	jimmy@ubuntu:~/images$ cd images
 
@@ -33,7 +34,7 @@
 	crtl+alt+1	切换回虚拟机
 	crtl+alt	从虚拟机中切出来（解除鼠标和键盘绑定，和VMware一样）
 
------------------------------分割线----------网桥配置---------------------------
+#-----------------------------分割线----------网桥配置--(tun tap0)----------2. add bridge---------------
 1. #设置tun设备权限
 	su
 	chown root.usergroup /dev/net/tun 
@@ -60,7 +61,7 @@
 6. #退出root后以网桥模式启动
 	qemu-system-i386 ./winxp_sp2.img.img -net nic,model=rtl8139 -net tap
 
------------------------------分割线------------快照镜像-------------------------
+#-----------------------------分割线------------快照镜像-------------------------
 1. 创建快照镜像snapshot.img（以winxp_sp2.img 为原始镜像，要为qcow2格式）：
 	qemu-img create -f qcow2 -b winxp_sp2.img snapshot.img
 

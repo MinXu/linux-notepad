@@ -1,3 +1,4 @@
+#====================Introduction===================================================================
 0. Introduction
 	QEMU Accelerator (KQEMU) is an old driver allowing the QEMU PC emulator to run much faster when emulating a PC on an x86 host. Current versions of qemu (0.11 and up) has no support for kqemu anymore, focusing on kvm instead. The information below is provided for historical reasons only.
 	KQEMU is supported on x86 or x86_64 Linux 2.4 or 2.6 hosts. Experimental versions are available for FreeBSD and Windows NT/2000/2003/XP. 
@@ -7,7 +8,9 @@
 
 2. 用户层和IO虚拟
 	采用qemu方案 ，即kvm-qemu
-=======================================================================================
+
+	
+#===================Install kvm tool====================================================================
 1. 用下面的命令检查cpu是否支持虚拟化,什么都不显示的话，就不能玩了。还好，我可以继续了。
 	egrep '(vmx|svm)' --color=always /proc/cpuinfo
 
@@ -28,6 +31,7 @@
 	apt-get install bridge-utils  
 
 
+#===================bridge(br0, eth0)====================================================================
 6. 编辑/etc/network/interface文件，编辑前我的文件如下：
 	# This file describes the network interfaces available on your system  
 	# and how to activate them. For more information, see interfaces(5).  
@@ -74,7 +78,7 @@
     [*****sudo rm  /etc/libvirt/qemu/networks/autostart/default.xml*****]
 	/etc/init.d/networking restart
 
-===========================================================================================================================
+#===================Install vm system====================================================================
 8. 创建虚拟镜像 (由于是要安装xp精简系统，2G已经足够大了（安装下来只要700M）。xxx 代表名字，想取什么都可以。最好是连续的英文.默认格式为raw，当然你可以自己设定，比如（-f qcow2）加在 create 后面即可。（.img这个后缀是我随便编的，kvm对后缀名没有要求） 其它格式如下：)
 	kvm-img create xxx.img 2G
 
@@ -86,24 +90,29 @@
 	或则
 	kvm -m 1024 -drive file=/xxx/xxx/xxx.img 
 
+#===================Snapshot====================================================================
 11 快照模式（-snapshot）(意思是不更改镜像文件，启动后的所有改动均不会往镜像文件上写。临时文件存放在内存中了，具体是cached。 同样的功能，在vbox要独立安装软件。效率可想而知…… 在命令后面空格加上：)
 	-snapshot
 
+#===================Faster Network====================================================================
 12. 高速网络（-net nic,model=virtio -net user）
 	驱动下载地址：
 		http://sourceforge.net/projects/kvm/files/
 	驱动安装命令：
 	kvm -m 1024 -drive file=xp.img -cdrom /home/cat650/linux/kvm/NETKVM-20081229.iso  -enable-kvm -net nic,model=virtio -net user
 
+#===================母镜像====================================================================
 13. 使用“母镜像”功能(其中xp.img是“母镜像”（参数 -b xxx），xp.test是新镜像——只能用 qcow2 格式。 新镜像的使用：正常使用即可。)
 	kvm-img create -f qcow2  -b xp.img xp.test  或者：kvm-img create -f qcow2 -o backing_file=xp.img xp.test
 
+#====================格式转换，===================================================================
 14. 镜像格式转换，镜像信息查询（能转换的格式有：raw,qcow2,qcow,cow,vmdk,cloop）
 	查询:
 		kvm-img info xxx.img
 	转换命令 （这条命令举例的意思是：把名为xp.img格式为raw的镜像转换成新镜像xp.qco格式为qcow2 其它格式"vmdk"是 VMware 3 / 4 兼容镜像格式。	）：
 		kvm-img convert -f raw -O qcow2 xp.img xp.qco
 
+#====================高速虚拟 ===================================================================
 15. 高速虚拟
 	下载地址：http://www.linux-kvm.org/page/WindowsGuestDrivers/Download_Drivers
 	带图片的参考：http://www.linux-kvm.org/page/WindowsGuestDrivers/viostor/installation
