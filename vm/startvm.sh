@@ -10,8 +10,23 @@ elif [ $1 = run ];then
 elif [ $1 = image ];then
 #	sudo qemu-system-x86_64 -kernel ~/linux_source/linux-3.13.0/arch/x86/boot/bzImage  -initrd rootfs.img  -append root="/dev/ram0 rw"
 #	sudo qemu-system-x86_64 -m 512 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "root =/dev/ram0 rw" -enable-kvm -localtime -net nic,vlan=0,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot d -smp 2 -soundhw es1370
-#	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "root =/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370
-	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -append "kgdboc=ttyAMA0 kgdbwait root=/dev/ram0 nfsroot=10.80.104.234:/home/xumin/cmc rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370
+
+	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "root =/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370 -k en-us -s
+
+#kdb...
+#	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "kgdboc=kms,kbd,ttyS0,115200 kgdbwait kgdbcon root =/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370 -k en-us -s
+
+#kbdb0
+#	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "kgdboc=ttyS0,115200 kgdbwait kgdbcon root =/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370 -k en-us -s
+
+#kgdb1
+	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "kgdboc=ttyS0,115200 kgdbwait kgdbcon root =/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370 -k en-us -s -S
+
+#kgdb2
+#	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -initrd ~/qemu/rootfs.img_d -append "kgdboc=ttyS0,115200 kgdbwait kgdbcon root =/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370 -k en-us -s -S
+
+#    nfs...
+#	sudo qemu-system-x86_64 -m 2048 -kernel ~/www/bzImage -append "kgdboc=ttyAMA0 kgdbwait root=/dev/ram0 nfsroot=10.80.104.234:/home/xumin/cmc rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370 -k en-us -s
 else
 	echo "vm start.sh"
 	echo "please input the paramter"
