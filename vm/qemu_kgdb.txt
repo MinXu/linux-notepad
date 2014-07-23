@@ -1,13 +1,8 @@
-qemu-system-x86_64 -kernel kernel/bzImage -append "root=/dev/sda" -boot c -hda busybox.img -k en-us -s -S 
 
 qemu-system-x86_64 -kernel kernel/bzImage -append "root=/dev/sda kgdboc=kms,kbd,ttyS0,115200 kgdbwait kgdbcon" -boot c -hda busybox.img -k en-us -serial tcp::1234,server 
 
 
-qemu-system-arm -M versatilepb -kernel arch/arm/boot/zImage -append "kgdboc=ttyAMA0 kgdbwait root=/dev/nfs nfsroot=192.168.1.24:/mnt/arm-fs rw ip=dhcp" -net nic,vlan=0 -net tap,vlan=0,script=./qemu-ifup -serial tcp::4444,server
-
-
-
-qemu-system-x86_64 -kernel ./linux-2.6.30/arch/i386/boot/bzImage -hda ./1248179541.img -boot c -append "root=/dev/sda kgdboc=ttyS0,115200 kgdbwait" -net nic,vlan=0 -net tap,vlan=0,ifname=tap0,script=/etc/qemu-ifup -serial tcp::4321,server -alt-grab
+qemu-system-arm -M versatilepb -kernel arch/arm/boot/zImage -append "kgdboc=ttyS0 115200 kgdbwait root=/dev/sda nfsroot=192.168.1.24:/mnt/arm-fs rw ip=dhcp" -net nic,vlan=0 -net tap,vlan=0,script=./qemu-ifup -serial tcp::4444,server -alt-grab -k en-us -s -S
 
 
 
