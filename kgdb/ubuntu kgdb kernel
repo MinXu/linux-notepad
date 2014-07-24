@@ -1,458 +1,277 @@
-转自： http://blog.csdn.net/dndxhej/article/details/7171805
-调试环境(末尾还有ubuntu下vmware的环境搭建方法)：
-
-主机：WindowsXP Professional 5.1.2600, Service Pack 3
-
-Vmware：VMware®Workstation 7.1.3 build-324285
-
-Ubuntu: ubuntu 10.04
+						ubuntu kgdb kernel 调试环境搭建 
+===================================================================================================================================================
+#转自： http://blog.csdn.net/dndxhej/article/details/7171805
+#调试环境(末尾还有ubuntu下vmware的环境搭建方法)：
 
 
-    在vmware中建立一个ubuntu的虚拟机，命名为FS_client.
+==================================================Two Vmware=======================================================================================
+#主机：WindowsXP Professional 5.1.2600, Service Pack 3
+#Vmware：VMware®Workstation 7.1.3 build-324285
+#    在vmware中建立一个ubuntu的虚拟机，命名为FS_client.
+#    Ubuntu: ubuntu 10.04
 
-root@huerjia:/home/huerjia#uname -a
-
-Linuxhuerjia 2.6.34.1 #4 SMP Mon Dec 26 22:16:52 CST 2011 i686 GNU/Linux
-
-
-下载的linux代码为：linux-2.6.34.1.tar.bz2
-
-解压在/home/huerjia/linux/linux-2.6.34.1中，
-
-
-开始编译内核：
-
-内核版本比较近，我们可以先
-
-cp/boot/config-2.6.32-28-generic/home/huerjia/linux/linux-2.6.34.1/.config
-
-再
-
-Make menuconfig：
-
-Load.config
-
-注意下面几个选项配置：
-
-主要是保证内核启动模块可动态加载的配置
-
-Loadablemodule support ----->
-
-保持默认状态
-
-KernelHacking -->
-
-选中Compilethe kernel with debug info
-     选中Compilethe kernel with frame pointers
-     选中KGDB:kerneldebugging with remote gdb
-
-其中，KGDB:kerneldebugging with remote gdb下全部选上。
+===================================Download Kernel Source======================
+    root@huerjia:/home/huerjia#uname -a
+    Linuxhuerjia 2.6.34.1 #4 SMP Mon Dec 26 22:16:52 CST 2011 i686 GNU/Linux
 
 
-也有几项需要去掉：
-
-Processortype and features中去掉Paravirtualizedguest support
-
-KernelHacking中去掉Writeprotect kernel read-only data structures（否则不能用软件断点）
+    下载的linux代码为：linux-2.6.34.1.tar.bz2
+    解压在/home/huerjia/linux/linux-2.6.34.1中，
 
 
-记得文件系统的ext2、ext3和ext4都选上。
+===================================Configure The Kgdb==========================
+#开始编译内核：
+#   内核版本比较近，我们可以先
+   cp/boot/config-2.6.32-28-generic/home/huerjia/linux/linux-2.6.34.1/.config
+#   再
+   make menuconfig：
+   load .config
+
+#   注意下面几个选项配置：
+
+#   1) 主要是保证内核启动模块可动态加载的配置
+      Loadablemodule support ----->
+      保持默认状态
+      KernelHacking -->
+      选中Compilethe kernel with debug info
+         选中Compilethe kernel with frame pointers
+         选中KGDB:kernel debugging with remote gdb
+         其中，KGDB:kernel debugging with remote gdb下全部选上。
+   
+   
+#   2) 也有几项需要去掉：
+      Processor type and features中去掉Para virtualized guest support
+      KernelHacking中去掉Writeprotect kernel read-only data structures（否则不能用软件断点）
+      记得文件系统的ext2、ext3和ext4都选上。
 
 
-保存.config文件
+   save .config文件
 
-接着
+===================================Compile The Linux Kernel Source=============
+#接着
+   make
+   make bzImage
+   make modules
+   make modules_install
+   make install
+   
+   
+   可以在/boot目下看到生成的System.map-2.6.34.1和vmlinuz-2.6.34.1
+   使用mkinitramfs-kpkg生initrd.img-2.6.34.1
+   
 
-Make
-
-MakebzImage
-
-Makemodules
-
-Makemodules_install
-
-Makeinstall
-
-
-可以在/boot目下看到生成的System.map-2.6.34.1和vmlinuz-2.6.34.1
-
-
-使用mkinitramfs-kpkg生initrd.img-2.6.34.1
-
-    使用vmware的clone功能新建一个ubuntu虚拟机，命名为FS_server。
-
-在client端添加串口，类型选Use named pipe：
-
-\\.\pipe\com_1
-
-Thisend is the client
-
-Theother end is a virtual machine
-
-在server端添加抽口，功能选Usenamed pipe：
-
-\\.\pipe\com_1
-
-Thisend is the server
-
-Theother end is a virtual machine
+===================================Clone the ubuntu============================
+#使用vmware的clone功能新建一个ubuntu虚拟机，命名为FS_server。
 
 
+===================================Setup the com===============================
+#1) 在client端添加串口，类型选Use named pipe：
+   \\.\pipe\com_1
+   This end is the client
+   The other end is a virtual machine
+
+#2) 在server端添加抽口，功能选Usenamed pipe：
+   \\.\pipe\com_1
+   This end is the server
+   The other end is a virtual machine
+
+
+===================================Install the kernel==========================
 将生成的System.map vmlinuz和 initrd.img拷贝到/boot下，重新命名为
-
-System.map-2.6.34.1-kgdb
-
-vmlinuz-2.6.34.1-kgdb
-
-initrd.img-2.6.34.1-kgdb
+   System.map-2.6.34.1-kgdb
+   vmlinuz-2.6.34.1-kgdb
+   initrd.img-2.6.34.1-kgdb
 
 
+===================================Install and Setup Grub======================
 运行update-grub
 
-
-接下来修改
-
-gvim/etc/default/grub
-
-gvim/boot/grub/grub.cfg
-
-/etc/default/grub修改如下：
-
-GRUB_DEFAULT=0 //设定默认启动项
-
-#GRUB_HIDDEN_TIMEOUT=30 //注释掉这行会显示引导菜单
-
-GRUB_HIDDEN_TIMEOUT_QUIET=false //如果为true，黑屏且不会显示倒计时
-
-GRUB_TIMEOUT=30 //倒计时
-
-GRUB_DISTRIBUTOR=`lsb_release -i-s 2> /dev/null || echo Debian`
-
-GRUB_CMDLINE_LINUX_DEFAULT="rootdelay=90quiet splash text" //text表示命令行方式启动
-
-GRUB_CMDLINE_LINUX=""
-
-
-/boot/grub/grub.cfg修改如下：
-
-### BEGIN /etc/grub.d/10_linux###
-
-menuentry 'Ubuntu, with Linux2.6.34.1-kgdb' --class ubuntu --class gnu-linux --class gnu --classos {
-
-recordfail
-
-insmod ext2
-
-set root='(hd0,1)'
-
-search --no-floppy --fs-uuid--set 78727361-022c-4790-8d39-a17565a4e155
-
-linux /boot/vmlinuz-2.6.34.1-kgdbroot=UUID=78727361-022c-4790-8d39-a17565a4e155 ro rootdelay=90quiet splash text kgdboc=ttyS1,115200 vga=14745600
-
-initrd /boot/initrd.img-2.6.34.1-kgdb
-
-}
-
-
-注意加上kgdboc=ttyS1,115200，kgdbwait不加感觉更好用。
-
-vga=14745600是想让命令行的窗口变大，但是没有效果。有人说装zhcon，改天试下。
-
-
-
-FS_server选择kgdb启动，
-
-登录后echog > /proc/sysrq-trigger 开启kgdb
-
-Server上显示：
-
-SysRq：DEBUG
-
-Entering KGDB
-
-这时候，在client端：
-
-Gdbvmlinux
-
-
-huerjia@huerjia:~/linux/linux-2.6.34.1$gdb vmlinux
-
-GNU gdb (GDB) 7.1-ubuntu
-
-Copyright (C) 2010 Free SoftwareFoundation, Inc.
-
-License GPLv3+: GNU GPL version3 or later <http://gnu.org/licenses/gpl.html>
-
-This is free software: you arefree to change and redistribute it.
-
-There is NO WARRANTY, to theextent permitted by law. Type "show copying"
-
-and "show warranty"for details.
-
-This GDB was configured as"i486-linux-gnu".
-
-For bug reporting instructions,please see:
-
-<http://www.gnu.org/software/gdb/bugs/>...
-
-Reading symbols from/home/huerjia/linux/linux-2.6.34.1/vmlinux...done.
-
-(gdb) set remotebaud 115200
-
-(gdb) target remote /dev/ttyS1
-
-Remote debugging using/dev/ttyS1
-
-kgdb_breakpoint (key=<valueoptimized out>, tty=<value optimized out>)
-
-at kernel/kgdb.c:1749
-
-1749 wmb(); /* Sync point afterbreakpoint */
-
-(gdb) l sys_init_module
-
-2497 }
-
-2498
-
-2499 /* This is where the realwork happens */
-
-2500 SYSCALL_DEFINE3(init_module,void __user *, umod,
-
-2501 unsigned long, len, constchar __user *, uargs)
-
-2502 {
-
-2503 struct module *mod;
-
-2504 int ret = 0;
-
-2505
-
-2506 /* Must have permission */
-
-(gdb)
-
-2507 if(!capable(CAP_SYS_MODULE) || modules_disabled)
-
-2508 return -EPERM;
-
-2509
-
-2510 /* Only one module load ata time, please */
-
-2511 if(mutex_lock_interruptible(&module_mutex) != 0)
-
-2512 return -EINTR;
-
-2513
-
-2514 /* Do all the hard work */
-
-2515 mod = load_module(umod,len, uargs);
-
-2516 if (IS_ERR(mod)) {
-
-(gdb) b 2515
-
-Breakpoint1 at 0xc017c44d: file kernel/module.c, line 2515.
-
-(gdb) c
-
-Continuing.
-
-
-此时在server端insmod cramfs.ko
-
-
-Client端显示：
-
-[NewThread 1660]
-
-[Switchingto Thread 1660]
-
-
-Breakpoint1, sys_init_module (umod=0xb769b008, len=168199, uargs=0x9ad5008 "")
-
-atkernel/module.c:2515
-
-2515 mod= load_module(umod, len, uargs);
-
-(gdb) p *mod
-
-Cannot access memory at address0x0
-
-(gdb) n
-
-2516 if (IS_ERR(mod)) {
-
-(gdb) p *mod
-
-Cannot access memory at address0x0
-
-(gdb) n
-
-2515 mod = load_module(umod,len, uargs);
-
-(gdb) p *mod
-
-$1 = {state =MODULE_STATE_COMING, list = {next = 0xe2582264,
-
-prev = 0xc0775a14}, name ="cramfs", '\000' <repeats 53 times>, mkobj = {
-
-kobj = {name = 0xdd6f2428"cramfs", entry = {next = 0xdf880100,
-
-prev = 0xe25822ac},parent = 0xdf88010c, kset = 0xdf880100,
-
-ktype = 0xc0775240, sd =0xdccd6630, kref = {refcount = {counter = 3}},
-
-state_initialized = 1,state_in_sysfs = 1, state_add_uevent_sent = 1,
-
-state_remove_uevent_sent =0, uevent_suppress = 0}, mod = 0xe25cc360,
-
-drivers_dir = 0x0, mp =0x0}, modinfo_attrs = 0xde740540, version = 0x0,
-
-srcversion = 0xdd175100"DFAAD48F3B1015295C8631C", holders_dir = 0xdd5e1980,
-
-syms = 0x0, crcs = 0x0,num_syms = 0, kp = 0x0, num_kp = 0,
-
-num_gpl_syms = 0, gpl_syms =0x0, gpl_crcs = 0x0, unused_syms = 0x0,
-
-unused_crcs = 0x0,num_unused_syms = 0, num_unused_gpl_syms = 0,
-
-unused_gpl_syms = 0x0,unused_gpl_crcs = 0x0, gpl_future_syms = 0x0,
-
-gpl_future_crcs = 0x0,num_gpl_future_syms = 0, num_exentries = 0,
-
-extable = 0x0, init =0xe25d7000, module_init = 0xe25d7000,
-
-module_core = 0xe25cb000,init_size = 3071, core_size = 39266,
-
-init_text_size = 42,core_text_size = 4040, arch = {<No data fields>},
-
-taints = 0, num_bugs = 0,bug_list = {next = 0xe2582358, prev = 0xc0788460},
-
-bug_table = 0x0, symtab =0xe25d702c, core_symtab = 0xe25d4554,
-
-num_symtab = 111,core_num_syms = 33, strtab = 0xe25d771c "",
-
-core_strtab = 0xe25d4764 "",sect_attrs = 0xdd119800,
-
-notes_attrs = 0xdccde3c0,percpu = 0x0, percpu_size = 0,
-
-args = 0xdd6f2418 "",tracepoints = 0x0, num_tracepoints = 0,
-
----Type <return> tocontinue, or q <return> to quit---
-
-
-(gdb) p*(mod->sect_attrs->attrs+1)
-
-$2 = {mattr = {attr = {name =0xde6d5828 ".text", owner = 0x0, mode = 292},
-
-show = 0xc0179670<module_sect_show>, store = 0, setup = 0, test = 0,
-
-free = 0}, name = 0xde6d5828".text", address = 3797725184}
-
-(gdb) p*(mod->sect_attrs->attrs+2)
-
-$3 = {mattr = {attr = {name =0xde653800 ".exit.text", owner = 0x0,
-
-mode = 292}, show =0xc0179670 <module_sect_show>, store = 0, setup = 0,
-
-test = 0, free = 0}, name =0xde653800 ".exit.text", address = 3797729196}
-
-(gdb) p*(mod->sect_attrs->attrs+3)
-
-$4 = {mattr = {attr = {name =0xdd1cae40 ".altinstr_replacement", owner = 0x0,
-
-mode = 292}, show =0xc0179670 <module_sect_show>, store = 0, setup = 0,
-
-test = 0, free = 0}, name =0xdd1cae40 ".altinstr_replacement",
-
-address = 3797729221}
-
-(gdb) p*(mod->sect_attrs->attrs+4)
-
-$5 = {mattr = {attr = {name =0xde6537f0 ".init.text", owner = 0x0,
-
-mode = 292}, show =0xc0179670 <module_sect_show>, store = 0, setup = 0,
-
-test = 0, free = 0}, name =0xde6537f0 ".init.text", address = 3797774336}
-
-
-(gdb) add-symbol-file/home/huerjia/linux/linux-2.6.34.1/fs/cramfs/cramfs.ko 3797725184 -s.exit.text 3797729196 -s .init.text 3797774336
-
-add symbol table from file"/home/huerjia/linux/linux-2.6.34.1/fs/cramfs/cramfs.ko" at
-
-.text_addr = 0xe25cb000
-
-.exit.text_addr = 0xe25cbfac
-
-.init.text_addr = 0xe25d7000
-
-(y or n) y
-
-Reading symbols from/home/huerjia/linux/linux-2.6.34.1/fs/cramfs/cramfs.ko...done.
-
-(gdb) b cramfs
-
-cramfs.mod.c cramfs_ops
-
-cramfs_aops cramfs_put_super
-
-cramfs_dir_inode_operations cramfs_read
-
-cramfs_directory_operations cramfs_readdir
-
-cramfs_drop_inode cramfs_readpage
-
-cramfs_fill_super cramfs_remount
-
-cramfs_fs_type cramfs_sb_info
-
-cramfs_get_sb cramfs_statfs
-
-cramfs_iget5_set cramfs_super
-
-cramfs_iget5_test cramfs_uncompress_block
-
-cramfs_info cramfs_uncompress_exit
-
-cramfs_inode cramfs_uncompress_init
-
-cramfs_lookup
-
-(gdb) b init_cramfs_fs
-
-Breakpoint 3 at 0xe26f7006: filefs/cramfs/inode.c, line 567.
-
-(gdb) c
-
-Continuing.
-
-
-Breakpoint 3, init_cramfs_fs ()at fs/cramfs/inode.c:567
-
-567 rv =cramfs_uncompress_init();
-
-(gdb)
-
-
-这样就可以从模块初始化开始debug模块了。后续对filesystem的学习就打通了途径。
-
-
-
-如果主机是linux，那就只需要建立一个虚拟机
-
-    新建一个虚拟机，增加一个串口，让串口指向命名管道/tmp/com_1
-    2)虚拟机安装Linux的一个发布版，推荐Fedora，因为我用ubuntu没有成功，^_^。
-    3)安装Fedora时不需要安装桌面，但开发库和开发工具要安装，如果你想在虚拟机上编译内核
-
-虚拟机的串口设置：
-
-vmware： 添加虚拟串口，在use socket（named pipe）里面填入 /tmp/serial，其他选this is server，other is an application
-
-三，创建配置文件
+#接下来修改
+#1) /etc/default/grub修改如下：
+   gvim /etc/default/grub
+      GRUB_DEFAULT=0 //设定默认启动项  
+      #GRUB_HIDDEN_TIMEOUT=30 //注释掉这行会显示引导菜单
+      GRUB_HIDDEN_TIMEOUT_QUIET=false //如果为true，黑屏且不会显示倒计时
+      GRUB_TIMEOUT=30 //倒计时
+      GRUB_DISTRIBUTOR=`lsb_release -i-s 2> /dev/null || echo Debian`
+      GRUB_CMDLINE_LINUX_DEFAULT="rootdelay=90 quiet splash text" //text表示命令行方式启动
+      GRUB_CMDLINE_LINUX=""
+
+
+
+#2) /boot/grub/grub.cfg修改如下：
+   gvim /boot/grub/grub.cfg
+   ### BEGIN /etc/grub.d/10_linux###
+   menuentry 'Ubuntu, with Linux2.6.34.1-kgdb' --class ubuntu --class gnu-linux --class gnu --classos {
+      recordfail
+      insmod ext2
+      set root='(hd0,1)'
+      search --no-floppy --fs-uuid--set 78727361-022c-4790-8d39-a17565a4e155
+      linux /boot/vmlinuz-2.6.34.1-kgdbroot=UUID=78727361-022c-4790-8d39-a17565a4e155 ro rootdelay=90quiet splash text kgdboc=ttyS1,115200 vga=14745600
+      initrd /boot/initrd.img-2.6.34.1-kgdb
+   }
+   #注意加上kgdboc=ttyS1,115200，kgdbwait不加感觉更好用。vga=14745600是想让命令行的窗口变大，但是没有效果。有人说装zhcon，改天试下。
+
+
+
+===================================Trigger the server(target)==================
+#3) FS_server选择kgdb启动，登录后
+   echo g > /proc/sysrq-trigger 开启kgdb
+
+   Server上显示：
+   SysRq：DEBUG
+   Entering KGDB
+
+===================================Debug on the client(Develop)================
+#4) 这时候，在client端：gdb vmlinux
+   #huerjia@huerjia:~/linux/linux-2.6.34.1$gdb vmlinux
+
+   GNU gdb (GDB) 7.1-ubuntu
+   Copyright (C) 2010 Free SoftwareFoundation, Inc.
+   License GPLv3+: GNU GPL version3 or later <http://gnu.org/licenses/gpl.html>
+   This is free software: you arefree to change and redistribute it.
+   There is NO WARRANTY, to theextent permitted by law. Type "show copying"
+   and "show warranty"for details.
+   This GDB was configured as"i486-linux-gnu".
+   For bug reporting instructions,please see:
+   <http://www.gnu.org/software/gdb/bugs/>...
+   Reading symbols from/home/huerjia/linux/linux-2.6.34.1/vmlinux...done.
+   #(gdb) set remotebaud 115200
+   #(gdb) target remote /dev/ttyS1
+   Remote debugging using/dev/ttyS1
+   kgdb_breakpoint (key=<valueoptimized out>, tty=<value optimized out>)
+   at kernel/kgdb.c:1749
+   1749 wmb(); /* Sync point afterbreakpoint */
+   #(gdb) l sys_init_module
+   2497 }
+   2498
+   2499 /* This is where the realwork happens */
+   2500 SYSCALL_DEFINE3(init_module,void __user *, umod,
+   2501 unsigned long, len, constchar __user *, uargs)
+   2502 {
+   2503 struct module *mod;
+   2504 int ret = 0;
+   2505
+   2506 /* Must have permission */
+   #(gdb)
+   2507 if(!capable(CAP_SYS_MODULE) || modules_disabled)
+   2508 return -EPERM;
+   2509
+   2510 /* Only one module load ata time, please */
+   2511 if(mutex_lock_interruptible(&module_mutex) != 0)
+   2512 return -EINTR;
+   2513
+   2514 /* Do all the hard work */
+   2515 mod = load_module(umod,len, uargs);
+   2516 if (IS_ERR(mod)) {
+   #(gdb) b 2515
+   Breakpoint1 at 0xc017c44d: file kernel/module.c, line 2515.
+   #(gdb) c
+   Continuing.
+   
+#5) 此时在server端
+   #insmod cramfs.ko
+   
+#6) Client端显示：
+   [NewThread 1660]
+   [Switchingto Thread 1660]
+   Breakpoint1, sys_init_module (umod=0xb769b008, len=168199, uargs=0x9ad5008 "")
+   atkernel/module.c:2515
+   2515 mod= load_module(umod, len, uargs);
+   #(gdb) p *mod
+   Cannot access memory at address0x0
+   #(gdb) n
+   2516 if (IS_ERR(mod)) {
+   #(gdb) p *mod
+   Cannot access memory at address0x0
+   #(gdb) n
+   2515 mod = load_module(umod,len, uargs);
+   #(gdb) p *mod
+   $1 = {state =MODULE_STATE_COMING, list = {next = 0xe2582264,
+   prev = 0xc0775a14}, name ="cramfs", '\000' <repeats 53 times>, mkobj = {
+   kobj = {name = 0xdd6f2428"cramfs", entry = {next = 0xdf880100,
+   prev = 0xe25822ac},parent = 0xdf88010c, kset = 0xdf880100,
+   ktype = 0xc0775240, sd =0xdccd6630, kref = {refcount = {counter = 3}},
+   state_initialized = 1,state_in_sysfs = 1, state_add_uevent_sent = 1,
+   state_remove_uevent_sent =0, uevent_suppress = 0}, mod = 0xe25cc360,
+   drivers_dir = 0x0, mp =0x0}, modinfo_attrs = 0xde740540, version = 0x0,
+   srcversion = 0xdd175100"DFAAD48F3B1015295C8631C", holders_dir = 0xdd5e1980,
+   syms = 0x0, crcs = 0x0,num_syms = 0, kp = 0x0, num_kp = 0,
+   num_gpl_syms = 0, gpl_syms =0x0, gpl_crcs = 0x0, unused_syms = 0x0,
+   unused_crcs = 0x0,num_unused_syms = 0, num_unused_gpl_syms = 0,
+   unused_gpl_syms = 0x0,unused_gpl_crcs = 0x0, gpl_future_syms = 0x0,
+   gpl_future_crcs = 0x0,num_gpl_future_syms = 0, num_exentries = 0,
+   extable = 0x0, init =0xe25d7000, module_init = 0xe25d7000,
+   module_core = 0xe25cb000,init_size = 3071, core_size = 39266,
+   init_text_size = 42,core_text_size = 4040, arch = {<No data fields>},
+   taints = 0, num_bugs = 0,bug_list = {next = 0xe2582358, prev = 0xc0788460},
+   bug_table = 0x0, symtab =0xe25d702c, core_symtab = 0xe25d4554,
+   num_symtab = 111,core_num_syms = 33, strtab = 0xe25d771c "",
+   core_strtab = 0xe25d4764 "",sect_attrs = 0xdd119800,
+   notes_attrs = 0xdccde3c0,percpu = 0x0, percpu_size = 0,
+   args = 0xdd6f2418 "",tracepoints = 0x0, num_tracepoints = 0,
+   ---Type <return> tocontinue, or q <return> to quit---
+   #(gdb) p*(mod->sect_attrs->attrs+1)
+   $2 = {mattr = {attr = {name =0xde6d5828 ".text", owner = 0x0, mode = 292},
+   show = 0xc0179670<module_sect_show>, store = 0, setup = 0, test = 0,
+   free = 0}, name = 0xde6d5828".text", address = 3797725184}
+   #(gdb) p*(mod->sect_attrs->attrs+2)
+   $3 = {mattr = {attr = {name =0xde653800 ".exit.text", owner = 0x0,
+   mode = 292}, show =0xc0179670 <module_sect_show>, store = 0, setup = 0,
+   test = 0, free = 0}, name =0xde653800 ".exit.text", address = 3797729196}
+   #(gdb) p*(mod->sect_attrs->attrs+3)
+   $4 = {mattr = {attr = {name =0xdd1cae40 ".altinstr_replacement", owner = 0x0,
+   mode = 292}, show =0xc0179670 <module_sect_show>, store = 0, setup = 0,
+   test = 0, free = 0}, name =0xdd1cae40 ".altinstr_replacement",
+   address = 3797729221}
+   #(gdb) p*(mod->sect_attrs->attrs+4)
+   $5 = {mattr = {attr = {name =0xde6537f0 ".init.text", owner = 0x0,
+   mode = 292}, show =0xc0179670 <module_sect_show>, store = 0, setup = 0,
+   test = 0, free = 0}, name =0xde6537f0 ".init.text", address = 3797774336}
+   #(gdb) add-symbol-file /home/huerjia/linux/linux-2.6.34.1/fs/cramfs/cramfs.ko 3797725184 -s .exit.text 3797729196 -s .init.text 3797774336
+   add symbol table from file"/home/huerjia/linux/linux-2.6.34.1/fs/cramfs/cramfs.ko" at
+   .text_addr = 0xe25cb000
+   .exit.text_addr = 0xe25cbfac
+   .init.text_addr = 0xe25d7000
+   (y or n) y
+   Reading symbols from/home/huerjia/linux/linux-2.6.34.1/fs/cramfs/cramfs.ko...done.
+   #(gdb) b cramfs
+   cramfs.mod.c cramfs_ops
+   cramfs_aops cramfs_put_super
+   cramfs_dir_inode_operations cramfs_read
+   cramfs_directory_operations cramfs_readdir
+   cramfs_drop_inode cramfs_readpage
+   cramfs_fill_super cramfs_remount
+   cramfs_fs_type cramfs_sb_info
+   cramfs_get_sb cramfs_statfs
+   cramfs_iget5_set cramfs_super
+   cramfs_iget5_test cramfs_uncompress_block
+   cramfs_info cramfs_uncompress_exit
+   cramfs_inode cramfs_uncompress_init
+   cramfs_lookup
+   #(gdb) b init_cramfs_fs
+   Breakpoint 3 at 0xe26f7006: filefs/cramfs/inode.c, line 567.
+   #(gdb) c
+   Continuing.
+   Breakpoint 3, init_cramfs_fs ()at fs/cramfs/inode.c:567
+   567 rv =cramfs_uncompress_init();
+   #(gdb)
+
+
+#7) 这样就可以从模块初始化开始debug模块了。后续对filesystem的学习就打通了途径。
+
+==================================================Host ubuntu & a Vmware=======================================================================================
+
+#一, 如果主机是linux，那就只需要建立一个虚拟机
+   #新建一个虚拟机，增加一个串口，让串口指向命名管道/tmp/com_0
+   #2)虚拟机安装Linux的一个发布版，推荐Fedora，因为我用ubuntu没有成功，^_^。
+   #3)安装Fedora时不需要安装桌面，但开发库和开发工具要安装，如果你想在虚拟机上编译内核
+
+#二, 虚拟机的串口设置：
+   vmware： 添加虚拟串口，在use socket（named pipe）里面填入 /tmp/serial，其他选this is server，other is an application
+
+
+#三，创建配置文件
     1) 复制虚拟机Linux的配置文件到要调试内核的源代码目录
     2）修改配置文件，（我用的是makemenuconfig）
       1，进入KernelHacking
@@ -460,34 +279,40 @@ vmware： 添加虚拟串口，在use socket（named pipe）里面填入 /tmp/se
       3, 选中Compilethe kernel with debug info
       4，选中KGDB:kernel debugging with remote gdb
 
-四，使用修改后的配置文件编译内核，并在虚拟机上安装编译好的内核。简单来说，就是:
+
+#四，使用修改后的配置文件编译内核，并在虚拟机上安装编译好的内核。简单来说，就是:
 	1) make
 	2) make modules_install
 	3) make install
-	请参考<LinuxKernel in a Nutshell>
+	#请参考<LinuxKernel in a Nutshell>
 
-五，配置目标机（虚拟机）:
+
+#五，配置目标机（虚拟机）:
 	1) 编辑/etc/sysctl.conf,设置kernel.sysrq=1
 	2) 修改/boot/grub/grub.conf，为新安装的内核增加引导参数。比如我的是：
-    kernel /vmlinuz-2.6.28 ro root=/dev/XXX kgdboc=ttyS1,115200kgdbwait 关键是kgdboc后面的。这种设置会使内核在加载kgdb模块后，立即等待远程gdb接入，如果想在用户登录以后再调试，就不需要这种设置。
+    kernel /vmlinuz-2.6.28 ro root=/dev/XXX kgdboc=ttyS1,115200 kgdbwait 关键是kgdboc后面的。这种设置会使内核在加载kgdb模块后，立即等待远程gdb接入，如果想在用户登录以后再调试，就不需要这种设置。
 
-六，如果内核是在虚拟机上编译的，那么将编译后的vmlinuz和System.map下载到开发机内核代码目录
+#六，如果内核是在虚拟机上编译的，那么将编译后的vmlinuz和System.map下载到开发机内核代码目录
 
-七，重启虚拟机:
+
+#七，重启虚拟机:
 	进入新安装的内核，如果要求gdb接入，则内核会自动挂起，并输出提示信息：kgdb:Waiting for connection from remote gdb...
 
-八，配置开发机（本机Linux）:
+
+#八，配置开发机（本机Linux）:
 	VMware中串口指向的命名管道并不是真实的命名管道，而是一个Unix-domain的socket，但是gdb不能使用这种socket，所以需要把它重定向到gdb能够支持的设备：
     $ socat -d -d /tmp/com_1 PTY，输出结果会告诉你定向到了哪个设备，如/dev/pts/2
 
-九，开始调试:
+
+#九，开始调试:
 	1) 进入内核代码目录
 	2) $gdb ./vmlinuz
 	3）$(gdb)setremotebaud 115200
 	4) $(gdb)target remote/dev/pts/2;当然也有可能不是2，根据实际情况而定
 	5) 如果成功，则会发现虚拟机的断点设在kernel/kgdb.c文件中
 
-十，如果是想在用户登录以后调试，则可以通过以下方法触发kgdb:
+
+#十，如果是想在用户登录以后调试，则可以通过以下方法触发kgdb:
 	1）$echottyS0 > /sys/module/kgdboc/parameters/kgdboc
 	2) $echo "g"> /proc/sysrq-trigger，再次触发
 
