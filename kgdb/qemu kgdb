@@ -1,0 +1,75 @@
+							qemu kgdb调试内核
+==========================================================================================================================================
+#1，编译内核
+#   按 linux-2.6.30 内核配置 版本5 编译内核
+
+===============================================Startup QEMU VM===============================
+#2，用Qemu 启动Linux
+/usr/local/qemu/bin/qemu -kernel ./linux-2.6.30/arch/i386/boot/bzImage -hda ./1248179541.img -boot c -append "root=/dev/sda kgdboc=ttyS0,115200 kgdbwait" -net nic,vlan=0 -net tap,vlan=0,ifname=tap0,script=/etc/qemu-ifup -serial tcp::4321,server -alt-grab
+
+   a，/usr/local/qemu/bin/qemu  ： qemu 程序，下边为参数
+   b，-kernel ./linux-2.6.30/arch/i386/boot/bzImage  ：  指定内核
+   c，-hda ./1248179541.img ：指定磁盘文件
+   d，-boot c ：qemu 启动参数
+   e，-append "root=/dev/sda kgdboc=ttyS0,115200 kgdbwait" ： 内核启动参数
+   f，-net nic,vlan=0 -net tap,vlan=0,ifname=tap0,script=/etc/qemu-ifup ：网络接口参数
+   g，-serial tcp::4321,server ：串口参数
+   h，-alt-grab ：使用ctrl + Shift + Alt 作为热键
+
+==============================================KGDB Setting(Develop end)======================
+#3，启动GDB
+   gdb vmlinux
+
+   #设定波特率
+   set remotebaud 115200
+
+   #连接到调试系统
+   #target remote localhost:4321
+
+   #当调试系统就绪时，会有如下信息
+   #Remote debugging using localhost:4321
+   #Malformed response to offset query, QC0000000000000001
+
+   #重新连接到调试系统
+   target remote localhost:4321
+
+
+#4，让系统启动完成（不打算调试启动过程的话）
+   continue
+
+==============================================Trigger KGDB(Target end)======================
+#5，让系统陷入调试
+   #在目标系统上输入
+   echo g > /proc/sysrq-trigge
+
+===========================================Install QEMU==============================================================================
+#使用qemu gdb-stub使用：
+#A Qemu debug memo 
+
+#0) 安装qemu
+   sudo apt-get install qemu qtemu
+
+#1) 创建rootfs img
+   qemu-img create rootfs.img 5G 
+   mkfs.ext3 -b 2048 rootfs.img 
+   sudo mount -o loop rootfs.img /mnt
+
+#2) 创建根文件系统
+   #没有?在虚拟机内安装一个精简的ubuntu算了....
+
+#3) 启动qemu  (-S 让qemu停止,并等待gdb的链接)
+   qemu -kernel export/common_pc-bzImage-WR2.0zz_cgl -hda rootfs.img -append "root=/dev/hda" -S
+
+#4) 在qemu窗口输入
+   ctrl+alt+2  切换到qemu 控制台
+   输入gdbserver 6443
+
+#5) 启动gdb
+   gdb common_pc-vmlinux-symbols-WR2.0zz_cgl
+   >target remote  127.0.0.1:6443
+   > b start_kernel
+   > c   
+
+#6) tips
+   ---比如设置了运行b fork, 在启动的时候可以c 50, 代表忽略50各种break point.  
+   ---Ctrl+C 即可停止内核运行,　bt可以看到当前运行的函数

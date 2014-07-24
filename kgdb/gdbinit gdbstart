@@ -1,0 +1,68 @@
+=====================================Setup Com Port==========================================
+#物理连接好串口线后，使用一下命令进行测试，stty可以对串口参数进行设置
+
+   在developer上执行：
+      stty ispeed 115200 ospeed 115200 -F /dev/ttyS0
+      echo hello > /dev/ttyS0
+   在target上执行：
+      stty ispeed 115200 ospeed 115200 -F /dev/ttyS1
+      cat /dev/ttyS1
+
+   #串口线没问题的话在target的屏幕上显示hello
+
+=====================================rmt(Develop end)========================================
+#在内核源码目录下编辑一文件.gdbinit(该文件用以对gdb进行初始化)，内容如下：
+   #vi .gdbinit
+      define rmt
+      set remotebaud 115200
+      target remote /dev/ttyS0
+      end
+      #
+      #以上在.gdbinit中定义了一个宏rmt，该宏主要是设置使用的串口号和速率
+
+
+
+=====================================debug(Target end)========================================
+#在root目录下建立一个脚本文件debugkernel，内容如下：
+   vi debug
+      #!/bin/bash
+      gdbstart -s 115200 -t /dev/ttyS1 <<EOF
+      EOF
+
+   chmod +x debugkernel
+   #这个脚本主要是调用gdbstart程序设置target机上使用的串口及其速率，并使内核处于调试状态
+
+=====================================debuging========================================
+#重启系统，选择以 2.4.23-kgdb内核启动，启动完成后运行debugkenel，这时内核将停止运行，在控制台屏幕上显示信息，并等待来自developer的串口连接
+   ./debug
+   About to activate GDB stub in the kernel on /dev/ttyS1
+   Waiting for connection from remote gdb...
+
+
+*在developer机器上
+
+   cd /home/liangjian/linux-2.4.23
+   gdb vmlinux
+      GNU gdb Red Hat Linux (5.3post-0.20021129.18rh)
+      Copyright 2003 Free Software Foundation, Inc.
+      GDB is free software, covered by the GNU General Public License, and you are
+      welcome to change it and/or distribute copies of it under certain conditions.
+      Type "show copying" to see the conditions.
+      There is absolutely no warranty for GDB.  Type "show warranty" for details.
+      This GDB was configured as "i386-redhat-linux-gnu"...
+
+   #执行rmt宏
+   (gdb) rmt
+      breakpoint () at kgdbstub.c:1005
+      1005                    atomic_set(&kgdb_setting_breakpoint, 0);
+
+   #这时target上的内核处于调试状态，可以查看其变量、设置断点、查看堆栈等，和用gdb调试用户程序一样--
+
+
+   (gdb) set solib-search-path /home/liangjian/lkm
+
+
+======================================Only old version kgdb==============================
+   #cp gdbmod-1.9 /usr/local/bin
+
+
