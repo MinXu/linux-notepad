@@ -1,0 +1,43 @@
+Kernel parameter: kgdboe
+====================================================================================================================================
+http://stackoverflow.com/questions/21300420/how-to-use-kgdb-over-ethernetkgdboe
+
+====================================================================================================================================
+#Have you read this: https://www.kernel.org/pub/linux/kernel/people/jwessel/kgdb/ch03s04.html ?
+
+#You have to run debugged kernel with special options - like for example:
+
+kgdbwait kgdbcon kgdboe=@192.168.248.76/,@192.168.242.24/00:11:22:33:44:55
+
+#and on debugging side you run following commands:
+	gdb
+	file vmlinux
+	target remote udp:192.168.248.76:6443
+
+#it has worked for me.
+
+
+=====================================================================================================================================
+#Kernel parameter: kgdboe
+
+#The term kgdboe is meant to stand for kgdb over ethernet. To use kgdboe, the ethernet driver must have implemented the NETPOLL API, and the kernel must be compiled with NETPOLL support. Also kgdboe uses unicast udp. This means your debug host needs to be on the same lan as the target system you wish to debug.
+
+#NOTE: Even though an ethernet driver may implement the NETPOLL API it is possible that kgdboe will not work as a robust debug method. Trying to debug the network stack for instance, would likely hang the kernel. Also certain IRQ resources cannot be easily shared between the normal kernel operation and the "polled context" where the system is stopped by kgdb. Using kgdboe with preemptible IRQ handlers for the device kgdboe is using is known to have with the system hanging for instance.
+
+#The kgdboe parameter string is as follows: kgdboe=[src-port]@<src-ip>/[dev],[tgt-port]@<tgt-ip>/[tgt-macaddr] where:
+				src-port (optional): source for UDP packets (defaults to 6443)
+				 src-ip (optional unless from boot): source IP to use (interface address)
+				dev (optional): network interface (eth0)
+				tgt-port (optional): port GDB will use (defaults to 6442)
+				 tgt-ip: IP address GDB will be connecting from
+				tgt-macaddr (optional): ethernet MAC address for logging agent (default is broadcast)
+
+#What follows are several examples of how to configure kgdboe in various ways.
+				#From boot with target ip = 10.0.2.15 and debug host ip = 10.0.2.2
+				kgdboe=@10.0.2.15/,@10.0.2.2/
+				#From boot using eth1, with target ip = 10.0.2.15 and debug host ip = 10.0.2.2
+				kgdboe=@10.0.2.15/eth1,@10.0.2.2/
+				#As a module, with target ip = 10.0.2.15 and debug host ip = 10.0.2.2. NOTE: The src ip is only required when booting with kgdboe enabled
+				kgdboe=@/,@10.0.2.2/
+				#You can also reconfigure kgdboe dynamically at run time as follows:
+				echo "@/,@10.0.2.2/" > /sys/module/kgdboe/paramters/kgdboe
