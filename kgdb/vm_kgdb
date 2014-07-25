@@ -194,27 +194,27 @@ http://blog.csdn.net/jie12310/article/details/4564853
 
     #进入Client系统.
     
-        #cd /usr/src/linux  
+        cd /usr/src/linux  
         #gdb vmlinux  
-        启动gdb开始准备调试:输出大致如下:
+        #动gdb开始准备调试:输出大致如下:
     
-        GNU gdb Red Hat Linux (6.3.0.0-1.153.el4rh)
-        Copyright 2004 Free Software Foundation, Inc.
-        GDB is free software, covered by the GNU General Public License, and you are
-        welcome to change it and/or distribute copies of it under certain conditions.
-        Type "show copying" to see the conditions.
-        There is absolutely no warranty for GDB.  Type "show warranty" for details.
-        This GDB was configured as "i386-redhat-linux-gnu"...Using host libthread_db 
-        library "/lib/tls/libthread_db.so.1" 
+        #GNU gdb Red Hat Linux (6.3.0.0-1.153.el4rh)
+        #Copyright 2004 Free Software Foundation, Inc.
+        #GDB is free software, covered by the GNU General Public License, and you are
+        #welcome to change it and/or distribute copies of it under certain conditions.
+        #Type "show copying" to see the conditions.
+        #There is absolutely no warranty for GDB.  Type "show warranty" for details.
+        #This GDB was configured as "i386-redhat-linux-gnu"...Using host libthread_db 
+        #library "/lib/tls/libthread_db.so.1" 
     
-        #(gdb) set remotebaud 115200
-        #(gdb) target remote /dev/ttyS0
+        (gdb) set remotebaud 115200
+        (gdb) target remote /dev/ttyS0
             #注意:有的文章讲:因为vmware的named piped不能被gdb直接使用,需要使用 socat -d -d /tmp/com_1 /dev/ttyS0转换,然后使用转换后的设备. socat需要自己下载安装. 但在我的环境中,直接使用并没有出错.
             #执行该命令后输出如下:
-        Remote debugging using /dev/ttyS0
-        kgdb_breakpoint () at kernel/kgdb.c:1674
-        1674		wmb(); /*Sync point after breakpoint */
-        warning: shared library handler failed to enable breakpoint
+        #Remote debugging using /dev/ttyS0
+        #kgdb_breakpoint () at kernel/kgdb.c:1674
+        #1674		wmb(); /*Sync point after breakpoint */
+        #warning: shared library handler failed to enable breakpoint
             #看到上面的内容说明已经连接成功,但Server上依然是假死状态,这时你可以像使用本地gdb一样设置断点(break),单步执行(step),或其它命令.
         #(gdb) cont
             #继续执行,Server就继续下面的系统初始化了.
@@ -284,7 +284,7 @@ http://blog.csdn.net/jie12310/article/details/4564853
 
         #出现上面的信息表示连接成功,但此时还不可以设置断点.我试了N次,现在设置端点后,无论Server上对scull做什么操作,Client上的gdb都不会停止.也有人说这是gdb的BUG,gdb无法正常解析内核模块的符号信息. 说是下载kgdb网站上的gdbmod可以解决该问题,但我试了之后发现根本没有用. 所以只能通过命令手动加载相关符号信息:
     (gdb) add-symbol-file /root/scull/scull.ko 0xd099a000
-    注意: 0xd099a000地址是在上面获取的,命令输入完了,系统会有如下提示信息(第二行后面的y是自己输入的:
+    #注意: 0xd099a000地址是在上面获取的,命令输入完了,系统会有如下提示信息(第二行后面的y是自己输入的:
     #add symbol table from file "/root/scull/scull.ko" at .text_addr = 0xd099a000
     (y or n)y
     #Reading symbols from /root/scull/scull.ko...done.        
