@@ -1,0 +1,247 @@
+                                             #KGDB+VMware内核调试环境搭建
+=======================================================================================================================
+http://www.eetop.cn/blog/html/21/766721-25573.html
+
+=========================================================前言==========================================================
+KGDB 是个一特殊的内核辅助工具，除了在内核代码中加入了一些调试代码外也提供一个 gdbstub 用于和远程 gdb 调试程序联机用。以前，这样一个使用远程 gdb 调试内核的开发需要在一般linux内核上打 KGDB 补丁(patches)同时编译时使用特殊编译设置来完成。 可喜的是，至 linux-2.6.xx（xx多少记不清了）后的版本内核已经正式将 kgdb 加入为主流核心发布的一部份。换句话说，内核开发者几乎不需花任何额外的功夫就可使用 kgdb。 此外，kgdb 成为主流内核发行一部份也代表他的稳定性及实用性受到社群的肯定。
+由于kgdb的方便易用，大大提高了linux平台下驱动开发者的效率。而使得他们不必像windows下的开发者一样使用痛苦的反汇编调试。
+本文从最基本的开始详细描述了如何搭建一个linux驱动调试环境。如何加载模块开始调试内核模块，如何调试模块的初始化函数。文中除了一小部分自创外大部分用到的办法都是从网上搜索拼凑的。在不同的平台下对应的办法会有些不同，读者可以根据自身的情况修改。
+
+====================================================安装系统（HOST&VM）===================================================================
+软硬件环境 ：
+PC机CPU   AMD  5000+ ：
+主机linux版本 ：Ubuntu10.04
+主机linux内核版本：2.6.32-37-generic
+虚拟机版本：VMware-Workstation-Full-7.1.4-385536.i386.bundle
+虚拟机linux版本跟内核版本与主机一致。
+第一步在主机上安装Ubuntu10.04。
+第二步在Ubuntu主机上安装虚拟机VMWare软件这一步没什么把软件修改为可执行就行了，另外注意软件版本要对，我刚开始用的7.1.3版本的运行老是提示错误弄了很久都没解决最后还是换新版本VM软件才行。
+第三步创建一个虚拟机，在虚拟机上安装Ubuntu系统，并在安装好的系统中安装VMTools工具。安装步骤仿似在PC下安装。如果遇到什么问题可以到虚 拟机之家去找解决方法。（这里注意几点：process选项最好选择1，单核cpu调试可以降低以后内核开发的复杂度。虽然慢一点但作为被调试端效率不占 主要因素。HardDisk尽量选大一点，你选多大硬盘空间并不立即占用你真实的硬盘空间。另外再提供一个序列号VV3M0-42Z4M-M80XY- T5PNT-MAUZF）  做完这几步之后应当创建一个快照，以防后面除了差错。
+
+
+=====================================================搭建KGDB==================================================================
+一般搭建一个 kgdb 的调试环境包含以下3步骤：
+步骤一， 编译核心（linux-2.6.xx以后内建 kgdb 功能的内核版本）以取得未经压缩的 vmlinux 内核可执行文件。 在调试端运行的 gdb 需要这个内核可执行文件以对目标端执行的内核作符号-地址比对以进行源码级(source-level debugging)除错。一般 linux 发行仅提供压缩之后的 vmlinuz内核文件，因此重新编译内核以取得 vmlinux 是必要的。当然存在其它间接取得 vmlinux的方法，但因为这些方法过于琐碎且非主流作法，因此此处不予讨论。
+步骤二， 修改grub参数让其识别新编译的 KGDB 内核，以及远程调试所需的内核启动参数。当你编译完带有KGDB的内核后，一般让grub识别新内核的工作属内核编译安装标准程序的一部分而用户并不需要 作任何处理。 但由于 KGDB 调试需要一些特殊的参数，而这些参数的设定需要用户透过手动修改grub参数来达成。本文针对GRUB 2操作作说明。读者如使用其它版本Grub，可参考相关的使用手册作修改。
+步骤三， 在调试端启动 gdb 连接目的端（被调试端）内核进行除错。这部份操作涉及调试端（主机）及被调试端（虚拟机）两台计算机，因此过程比较繁复。 同时又因应不同传输接口（以太网络，RS232，USB-RS232，USB）对应的操作又有差异。 为简化讨论，本文以串口调试为主，其它的调试接口方式不做说明。以下将依上述三步骤为骨干，详细解释上面所说的每一步。需说明的是本文仅仅对应一种硬件平 台和操作系统有用。并不一定适用于所有操作系统版本及硬件架构。如果读者使用不同平台进行 kgdb 搭建时，需注意平台的差异性。
+
+
+
+
+=====================================================详细说明===================================================================
+#详细步骤及说明
+
+
+==================================================相关工具安装==================================================================
+
+#安装编译必要工具套件（如果安装不成功就更换源，一般163源都是可以的）
+$sudo apt-get install fakeroot kernel-wedge build-essential makedumpfile kernel-package
+$sudo apt-get install  libncurses5-dev
+
+
+
+==================================================下载内核======================================================================
+＃安装内核程序编译依赖程序
+$sudo apt-get build-dep --no-install-recommends linux-image-$(uname -r)
+＃在home目录里建立 src 子目录，并下载与目前系统相同版本的内核源码，然后切换工作目录到 linux-2.6.35
+$mkdir ~/src
+$cd ~/src
+$apt-get source linux-image-$(uname -r)
+$cd linux-2.6.32
+
+
+==================================================设定内核参数======================================================================
+＃使用原始的内核设定参数
+$cp   -vi    /boot/config-$(uname -r)      .config
+
+＃根据需要修改内核设置选项
+$make menuconfig
+#在 这里建议关闭一个选项： DEBUG_RODATA   CONFIG_DEBUG_RODATA = n 该选项是将内核的一些内存区域空间设置为只读，这样可能导致kgdb的设置软断点功能失效。所以推荐将该选项关闭。（这个 这个选项需要修改 ！其他的选项都已经是默认设置了无需修改，关于其它的内核选项意义可见本文末附录，如果是其它版本的linux就要注意这里提到的其它选项了）。
+#注:这里可不做任何修改!!
+
+Location:  
+     -> Kernel hacking      ->Write protect kernel read-only data structures
+#修改内核Makefile优化选项将KBUILD_CFLAGS += -O2,修改为：KBUILD_CFLAGS += -O。这里仅仅能修改为-O了，以前曾经尝试修改为-O0老是错误弄了很久也没成功。主要是在编译期间内联函数出错，据说某些大牛在研究者个问题。小弟一人之力无法解决了，但是以后可以把单独的 一个驱动模块用-O0编译，这是后话）
+$gedit Makefile
+	BUILD_CFLAGS += -O
+
+==================================================编译======================================================================
+＃使用多核心（如果你的编译平台有多核心处理器）加速编译过程，n = 1 +number_of_core.
+$export CONCURRENCY_LEVEL=n
+
+＃使用 Debian 开发的 make-kpkg 套件工具编译内核，clean 目标在清除核心原始码中可能的非必要残余程序。详细说明可参考 make-kpkg 在线使用者手册。
+$make-kpkg clean
+
+＃ 以虚拟系统管理员身份，使用 Debian 开发的 make-kpkg 套件工具编译内核。此处注意在核心版本后加注“-kgdb”名字以供辨认，读者可使用不同名称。指令执行后会在~/src 及~/src/linux-2.6.32目录中产生一些新文件。（注意这一步需要数个小时，因此先检查一下前面是否已经没有错误，然后就去一边等待几个小 时后再回来吧。。。）
+$fakeroot make-kpkg --initrd --append-to-version=-kgdb kernel-image kernel-headers
+
+＃回到~/src，准备安装核心.deb 套件。
+$cd ~/src
+
+==================================================安装======================================================================
+#最后产生内核加载所需的RAMDISK 系统。注意，下面指令中蓝色字体在读者计算机中可能有不同内容。以下操作会在计算机/boot 种产生一些内核运行必要文件。
+$sudo dpkg -i linux-headers-2.6.32.49+drm33.21-kgdb_2.6.32.49+drm33.21-kgdb-10.00.Custom_i386.deb
+$sudo dpkg -i linux-image-2.6.32.49+drm33.21-kgdb_2.6.32.49+drm33.21-kgdb-10.00.Custom_i386.deb
+$sudo update-initramfs -c -k 2.6.32.49+drm33.21-kgdb
+
+==================================================修改grub======================================================================
+＃备份grub文件，非必要动作，但若是新建内核崩溃时，可还原原始 grub.cfg。
+$sudo cp /boot/grub/grub.cfg /boot/grub/grub.cfg.bak
+
+＃加新建内核到 GRUB 开机选单中。
+$sudo update-grub
+一般内核编译安装到此一阶段即算完成，但由于 kgdb 操作的特殊性，我们需要手动透过 grub 传递一些核心参数给核心，所以有以下步骤二的操作。
+
+步 骤二，设置Grub以加入新编译的 KGDB 内核，及远程调试所需的内核设置参数。GRUB 2 （Ubuntu 10.10所使用的 grub)的设置文件是 /boot/grub/grub.cfg 。注意不能直接修改 grub.cfg，正确的操作方法是修改 /etc/grub.d/40_custom 然后执行update-grub。此时 update-grub 将使用40_custom 内容更新 grub.cfg。当再次开机时，按住 SHIFT 键，一会儿开机内核选项会出现，此时你可以使用上下键选取新的内核开机。
+如何产生/etc /grub.d/40_custom 呢？标准作法是复制/boot/grub/grub.cfg 中的一节（/boot/grub/grub.cfg 中的一节指的 是由 menuentry 开始到”}”结束的一段文字）。如下红色字体部分所示，将这节文字贴到/etc/grub.d/40_custom 中，再做必要修改：
+### BEGIN /etc/grub.d/10_linux ###
+menuentry 'Ubuntu, with Linux 2.6.32.49+drm33.21-kgdb' --class ubuntu --class gnu-linux --class gnu --class os {
+    recordfail
+    insmod ext2
+    set root='(hd0,1)'
+    search --no-floppy --fs-uuid --set 05c81d86-d0e4-450f-ae07-2062deae8ddf
+    linux    /boot/vmlinuz-2.6.32.49+drm33.21-kgdb root=UUID=05c81d86-d0e4-450f-ae07-2062deae8ddf ro   crashkernel=384M-2G:64M,2G-:128M quiet splash
+    initrd    /boot/initrd.img-2.6.32.49+drm33.21-kgdb
+}
+如下为拷贝后/etc/grub.d/40_custom文件的内容。
+#!/bin/sh
+exec tail -n +3 $0
+# This file provides an easy way to add custom menu entries. Simply type the
+# menu entries you want to add after this comment. Be careful not to change
+# the 'exec tail' line above.
+menuentry 'Ubuntu, with Linux 2.6.32.49+drm33.21-kgdb-debug' --class ubuntu --class gnu-linux --class gnu --class os {
+    recordfail
+    insmod ext2
+    set root='(hd0,1)'
+    search --no-floppy --fs-uuid --set 05c81d86-d0e4-450f-ae07-2062deae8ddf
+    linux    /boot/vmlinuz-2.6.32.49+drm33.21-kgdb root=UUID=05c81d86-d0e4-450f-ae07-2062deae8ddf ro kgdboc=ttyS1,115200 kgdbwait
+    initrd    /boot/initrd.img-2.6.32.49+drm33.21-kgdb
+}
+修改后的/etc/grub.d/40_custom 内容。注意，图中蓝色字体部分是你需要手动修改的地方。
+
+上 面单引号引用的 Ubuntu, with Linux 2.6.32.49+drm33.21-kgdb-debug 字符串是将显示在开机选项上的内核辨任文字，你可以依喜好自行更改。而kgdboc=ttyS1,115200 kgdbwait字符串是针对使用串口进行远程调试所需设置的内核参数，（注意上面的kgdboc=后面应当是ttyS1，而不是 ttyS0否则会导致串口无法使用，具体原因可以看我的另一篇文章 http://www.arm9home.net/read.php?tid-11519.html
+）  相关各参数的意义可参考
+[src/Documents/Kernel_parameter]。
+待/etc/grub.d/40_custom 修改后，请执行
+$sudo update-grub
+随后/etc/grub.d/40_custom 的内容会新增到/boot/grub/grub.cfg 中，而开机时选项中亦会出现这个使用串行进行远程调试的内核选项。
+
+
+==================================================串口======================================================================
+步骤三，测试调试端与被调试端串口通信的情况是否通畅：
+为被调试端（虚拟机新加虚拟串口） ,首先关闭虚拟机。
+VM->Setting->HardWare->Add->Outputtosocket->next->socket:/tmp/iosocket->Form.:ServerToApplication->Connect At PowerOn->Finish
+再次打开虚拟机：
+在主机中执行命令ls /tmp看看iosocket有没有被创建：
+
+[点击图片可在新窗口打开]
+
+再在主机执行命令将iosocket模拟为串口：
+gudujian@gudujian-System-Product-Name:~$ socat -d -d /tmp/iosocket  PTY:
+2011/11/21 08:20:21 socat[11401] N opening connection to AF=1 "/tmp/iosocket"
+2011/11/21 08:20:21 socat[11401] E connect(3, AF=1 "/tmp/iosocket", 15): Permission denied
+2011/11/21 08:20:21 socat[11401] N exit(1)
+
+gudujian@gudujian-System-Product-Name:~$ sudo socat -d -d /tmp/iosocket  PTY:
+2011/11/21 08:21:06 socat[11419] N opening connection to AF=1 "/tmp/iosocket"
+2011/11/21 08:21:06 socat[11419] N successfully connected from local address AF=1 "\xCE" 2011/11/21 08:21:06 socat[11419] N successfully connected via  2011/11/21 08:21:06 socat[11419] N PTY is /dev/pts/52011/11/21 08:21:06 socat[11419] N starting data transfer loop with FDs [3,3] and [4,4]
+注意到上面命令输出的那个/dev/pts/5,这就是我们要用到的串口设备文件，设置串口波特率：
+$sudo stty ispeed 115200 ospeed 115200 -F /dev/pts/5
+在主机端执行：sudo cat /dev/pts/5
+在虚拟机串口中执行：echo gudujian > /dev/ttyS1
+可见主机端有正确的输出。
+[点击图片可在新窗口打开]
+
+
+
+==================================================调试======================================================================
+步骤三，在调试端启动 gdb 连接被调试端内核进行除错。
+首 先要做的是拷贝被调试端的源码目录及 vmlinux 到调试端。vmlinux 文件应该出现在被调试端的目录~/src/linux-2.6.35中(记得我们是在被调试端进行 KGDB 内核编译)。在这里可以使用虚拟机的文件共享功能将被调试端的~/src/linux-xxx拷贝到主机端的~/src/linux-xx：
+gudujian@gudujian-virtual-machine:~/src$ cp -r linux-2.6.35/ /mnt/hgfs/src/
+拷贝完之后关闭虚拟机重新打开时按住shift选择调试内核选项：
+[点击图片可在新窗口打开]
+启动被调试内核。
+被调试内核启动后中断下来等待调试端链接：
+[点击图片可在新窗口打开]
+在调试端执行命令：
+sudo socat -d -d /tmp/iosocket  PTY:
+然后仿照上面串口通信的方式设置波特率：
+sudo stty ispeed 115200 ospeed 115200 -F /dev/pts/5
+在主机端vmlinux目录下用gdb链接被调试端：
+sudo gdb ./vmlinux
+taget remote /dev/pts/2
+此时可以看到被调试端被链接上后的状态：
+
+
+此时就可以设置其它断点（breakpoint），这样的话每次设定断点的函式被呼叫时，目的端的内核会停下来等你在开发端输入新指令作调试动作。如下所示，我们连续设定三个断点，分别是
+#创建批量urb并发送到特定的设备。
+(gdb)b usb_bulk_msg
+
+#创建控制urb并发送到特定的设备。
+(gdb)b  usb_control_msg
+
+创建中断urb并发送到特定的设备。
+(gdb)b  usb_interrupt_msg
+
+[点击图片可在新窗口打开]
+
+每当上述函数被调用时，目的端内核执行会中断，然后你可透过其它指令操作查看内核执行的状态。接着执行
+(gdb)c
+此时，目的端内核执行会在第一次调用 usb_control_msg 时中断，开发端 gdb 显示如图。
+[点击图片可在新窗口打开]
+
+对应的被调试端显示如。
+[点击图片可在新窗口打开]
+
+此时你可在调试端下达 gdb 指令如 next 以显示对应源码并跟踪程序执行，如下所示。
+(gdb) n
+
+[点击图片可在新窗口打开]
+
+当目标机的内核已经break在 wmb()上时，如果你要目标机继续工作，可以c 一下，做一些事情，然后在目标机上再次敲 echo g > /proc/sysrq-trigger，又会回来。（敲此命令前，先在目标机上运行sudo su）
+
+
+后面关于gdb的使用基本上与普通方式使用gdb是一样的。不熟悉的可以参考网上的资料这里略去。
+
+
+
+===============================================kgdb  configure================================================
+附录：关于内核配置的一些选项。
+KGDB_SERIAL_CONSOLE  CONFIG_KGDB_SERIAL_CONSOLE = y (使用串口进行通信)
+Location:    
+    -> Kernel hacking    
+       -> KGDB: kernel debugger
+              -> KGDB: use kgdb over the serial console
+
+KGDB_LOW_LEVEL_TRAPCONFIG_KGDB_LOW_LEVEL_TRAP=y                                      
+使 能该选项可以kgdb不依赖notifier_call_chain()机制来获取断点异常,
+这样就可以对notifier_call_chain()机制实现相关的函数进行单步调试。
+Depends on: KGDB [=y] && (X86 [=y] || MIPS [=MIPS])
+Location:  
+     -> Kernel hacking  
+       -> KGDB: kernel debugger (KGDB [=y])
+      ->KGDB: Allow debugging with traps in notifiers
+
+DEBUG_INFO      CONFIG_DEBUG_INFO = y
+该选项可以使得编译的内核包含一些调试信息，使得调试更容易。
+Location:  
+     -> Kernel hacking
+      ->compile the kernel with debuginfo
+
+
+
+FRAME_POINTER     CONFIG_FRAME_POINTER = y
+该选项将使得内核使用帧指针寄存器来维护堆栈，从而就可以正确地执行堆栈回溯，即函数调用栈信息。 （bt  where会用到这些？？）
+Location:  
+     -> Kernel hacking
+        ->Compile the kernel with frame. pointers
+
+MAGIC_SYSRQ  CONFIG_MAGIC_SYSRQ = y
+(如果你选择了KGDB_SERIAL_CONSOLE,这个选项将自动被选上)
+激活"魔术 SysRq"键. 该选项对kgdboc调试非常有用，kgdb向其注册了‘g’魔术键来激活kgdb 。
+  Location:  
+     -> Kernel hacking
+       ->magic SysRq key
+当你想手动激活kgdb时，你可以触发SysRq的g键, 如:
+$ echo "g" > /proc/sysrq-trigger
+

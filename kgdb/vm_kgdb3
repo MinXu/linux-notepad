@@ -1,0 +1,207 @@
+							利用kgdb调试Linux kernel
+==========================================================================================================================================
+#http://blog.csdn.net/defeattroy/article/details/5262933
+#创建时间：2010-01-27
+#作者：Steven Yang
+#E-mail：mqyoung@gmail.com
+ 
+==================================================================更正====================================================================
+#更正：
+#使用KGDB调试不一定需要调试端（Developer）与目标机器（Target）有相同的体系结构，所以本文中所说的虚拟机也不是必要的！直接在Developer端的kernel的代码根目录下运行gdb就可以 ～ ！！ --2010-04-20
+
+ 
+================================================================环境配置==================================================================
+#为了高效的对kernel进行调试，作者在实验室利用已有的资源进行环境配置。首先是硬件环境，我有两个PC，
+#一个是P III，Debian（Target）
+#一个是AMD 64，Ubuntu（Developer）
+#要通过Developer调试Target，这就需要给Target重编内核，并进行串口调试相关设置，而Developer需要装一个32位的虚拟机用作调试。如下为详细的配置过程。
+
+ 
+================================================================Introduction==============================================================
+#1 KGDB Introduction
+  KGDB is a debugger for the Linux kernel. It requires two machines that are connected via a serial connection. The serial connection may either be an RS-232 interface using a null modem cable, or via the UDP/IP networking protocol (KGDB over Ethernet, KGDBoE).
+KGDB was originally implemented as a patch to Linux kernel, but it has been included in the official kernel in 2.6.26. The target machine (the one being debugged) runs the patched kernel and the other (host) machine runs gdb. The GDB remote protocol is used between the two machines.
+KGDB is available for the following architectures: x86, x86-64, PowerPC, ARM, MIPS, and S390.
+It is free software released under the terms of the GNU General Public License. Until 2006 kgdb was maintained by Linsyssoft Technologies., after which Jason Wessel at Wind River Systems, Inc. took over as the official maintainer.
+Ingo Molnar and Jason Wessel created a slimmed-down and cleaned up version of KGDB which was called "kgdb light" (without Ethernet support and many other hacks). This was the one merged into the 2.6.26 kernel.[1] The version of kgdb in the 2.6.26 kernel supports only rs232 using a driver which can split debugger inputs and console inputs such that only a single rs232 port is required.
+Jason Wessel created a kgdb test suite which was merged into the 2.6.26 kernel in order to regression test the kgdb core as well as to aid in the validation of future architecture support for kgdb.
+
+FROM: http://en.wikipedia.org/wiki/KGDB
+Refer: http://kgdb.linsyssoft.com/quickstart.htm
+
+ 
+================================================================Configure Kernel=======================================================
+#2 Compile new kernel for Target
+   #kgdb 选项 ：
+      #选项在 Kernel hacking 里可以找到
+      CONFIG_KGDB=y
+      CONFIG_KGDB_SERIAL_CONSOLE=y
+      
+      #同时，为了能在系统运行时中断系统并出发远程 gdb，必须打开内核 Magic Sys-Rq 键选项 ：
+      CONFIG_MAGIC_SYSRQ=y
+      #打开内核符号调试：
+      CONFIG_DEBUG_INFO=y
+   
+   #注意事项：
+      CONFIG_DEBUG_RODATA 必须被禁用，否则kgdb讲无法正常使用。
+   
+   #因为调试用到串口，所以确保内核有相关选项，请参考《Linux串口调试配置_GRUB串口通信_串口登陆 》一文
+
+ 
+
+================================================================Compile Kernel=======================================================
+#编译内核，安装
+   make
+   make modules_install
+   make install
+
+
+================================================================Configure Grub======================================================= 
+#编辑GRUB
+   #这里需要注意，网上有些关于KGDB的资料上面的GRUB引导参数在新版本kernel下不工作（例如我用的2.6.32.4），正确的配置如下：
+   /boot/vmlinuz-2.6.32.4-xm-1.0-kgdb root=/dev/hda1 ro kgdb=ttyS0,115200 kgdboc=ttyS0,115200 kgdbwait
+   #这个启动选项中，kgdboc 的意思是 kgdb over console，这里将kgdb连接的console设置为ttyS0，波特率为115200，kgdbwait 使 kernel 在启动过程中等待 gdb 的连接
+   #reboot Target后选择新内核进入系统，那么内核引导后一会便停止运行，在控制台屏幕上显示信息“Waiting for connection from remote gdb...”，并等待来自developer的串口连接
+
+
+================================================================Configure Breakpoint=======================================================
+#这是我在网上找到的一段话：
+   That should get you to the initial kernel breakpoint.
+And also, if you <c>ontinue from there after setting another breakpoint, you should know that some other boot component usually resets the UART after the initial breakpoint and change its parms (speed), preventing the dev machine gdb to communicate with the target at the speed indicated on the kernel line. IOW, you get control with the dev machine gdb on the first breakpoint, but on the second breakpoint, the target machine appears to be unreachable.One way out of this is to try several UART speeds from the gdb side until you hit the one that fits and allows gdb to talk to kgdb (that could be 9600, try this first).Another way, if you still have control on the target before the next breakpoint you set triggers, is to reset the ttyS0 UART again to 115200 (or whatever you like) on the target from a terminal.
+
+ 
+
+================================================================Qemu Startup VM=======================================================
+#配置Developer端
+   #注意事项：事实上我这个和环境不需要装虚拟机，可以直接在我的64位机上运行gdb
+   #安装qemu，装一个虚拟机，例如Debian，具体可参考《QEMU虚拟机及网桥设置 》一文，完成后运行
+   kvm -hda ./debian.img -boot c -serial /dev/ttyS0 -localtime -m 512 -net tap -net nic
+
+   #然后将编译后的linux kernel代码拷贝到虚拟机上，在源代码根目录创建一个文件.gdbinit内容如下：
+
+      [c-sharp] view plaincopy
+          define rmt  
+          set remotebaud 115200  
+          target remote /dev/ttyS0  
+          end  
+      
+      #注意事项：需要注意的是这个文件的权限不可以是777， 755可以
+
+#确保Target处于等待状态，串口连接设置正确后后在Developer机器上运行GDB
+   debian:~/linux-2.6.32.4# gdb vmlinux
+   GNU gdb 6.8-debian
+   Copyright (C) 2008 Free Software Foundation, Inc.
+   License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+   This is free software: you are free to change and redistribute it.
+   There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+   and "show warranty" for details.
+   This GDB was configured as "i486-linux-gnu"...
+   (gdb)
+   #执行rmt
+   (gdb) rmt
+   kgdb_breakpoint () at kernel/kgdb.c:1721
+   1721                    wmb();  /*Sync point after breakpoint*/
+   #查看堆栈bt命令这里会列出当前的调用堆栈
+   (gdb) bt
+   #0  kgdb_breakpoint () at kernel/kgdb.c:1721
+   #1  0xc1040332 in kgdb_register_io_module (new_kgdb_io_ops=0xc14083b8) at kernel/kgdb.c:1673
+   #2  0xc1169323 in configure_kgdboc () at drivers/serial/kgdboc.c:67
+   #3  0xc1001046 in do_one_initcall (fn=0xc1432dfa <init_kgdboc>) at init/main.c:721
+   #4  0xc141f412 in kernel_init (unused=<value optimized out>) at init/main.c:761
+   #5  0xc1002d93 in kernel_thread_helper () at arch/x86/kernel/entry_32.S:1020
+   #如果想让target上的内核继续运行，执行continue命令
+   (gdb) continue
+   Continuing.
+   #至此，我们的KGDB可以工作了^_^
+
+ 
+================================================================KGDB调试内核模块=======================================================
+#用KGDB调试内核模块
+   #上面已经说明如何调试内核，结合gdb的相关命令就能进行内核调试，那么要通过它调试内核模块呢？
+   #要想调试内核模块，需要相应的gdb支持，kgdb的主页上提供了一个工具gdbmod，它修正了gdb 6.0在解析模块地址时的错误，可以用来正确的调试内核模块
+   #给Target编译一个测试模块，代码如下:
+
+   #kgdb_demo.c:
+   [cpp] view plaincopy
+   
+       #include<linux/init.h>  
+       #include<linux/module.h>  
+       #include<linux/kernel.h>  
+       int mod_init()  
+       {  
+               printk("Initial moudle .../n");  
+               return 0;  
+       }  
+       void mod_exit()  
+       {  
+               printk("Exit .../n");  
+       }  
+       module_init(mod_init);  
+       module_exit(mod_exit);  
+       MODULE_LICENSE("GPL");  
+       MODULE_AUTHOR("STEVEN");  
+   
+   
+   #Makefile:
+   [cpp] view plaincopy
+   
+       obj-m := kgdb_demo.o  
+       KERNELBUILD := /lib/modules/`uname -r`/build  
+       default:  
+               make -C $(KERNELBUILD) M=$(shell pwd) modules   
+       clean:  
+               rm -rf *.o *.cmd *.ko *.mod.c .tmp-versions *.symvers  
+   
+   #说明：由于我们所使用的内核代码已经打开-g选项，所以这里编译的模块也会带上-g选项的
+
+===================================KGDB调试内核模块===============
+#编译该模块：
+   cd /root/kgdb_demo
+   make
+   #(如果是在Developer端编译，那么把kgdb_demo.ko拷贝到Target端，如果在Target端编译，那么把这个模块的源代码拷贝到Developer端，如/root/kgdb_demo下)
+
+===================================KGDB开始调试=================
+#开始调试
+   debian:~/linux-2.6.32.4# gdb vmlinux
+   GNU gdb 6.8-debian
+   Copyright (C) 2008 Free Software Foundation, Inc.
+   License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+   This is free software: you are free to change and redistribute it.
+   There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+   and "show warranty" for details.
+   This GDB was configured as "i486-linux-gnu"...
+   #设置符号文件的搜索路径 
+   (gdb) set solib-search-path /root/kgdb_demo
+   #执行rmt宏 
+   (gdb) rmt
+   kgdb_breakpoint () at kernel/kgdb.c:1721
+   1721        wmb(); /* Sync point after breakpoint */
+   #查看堆栈 
+   (gdb) bt
+   #0  kgdb_breakpoint () at kernel/kgdb.c:1721
+   #1  0xc1040332 in kgdb_register_io_module (new_kgdb_io_ops=0xc14083b8) at kernel/kgdb.c:1673
+   #2  0xc1169323 in configure_kgdboc () at drivers/serial/kgdboc.c:67
+   #3  0xc1001046 in do_one_initcall (fn=0xc1432dfa <init_kgdboc>) at init/main.c:721
+   #4  0xc141f412 in kernel_init (unused=<value optimized out>) at init/main.c:761
+   #5  0xc1002d93 in kernel_thread_helper () at arch/x86/kernel/entry_32.S:1020
+   #设置断点，linux-2.6.32.4/kernel/module.c的2597行为module的入口，故设在这里
+   (gdb) b kernel/module.c:2597
+   Breakpoint 1 at 0xc103f39a: file kernel/module.c, line 2597.
+   #用c(ontinue)命令继续执行，直到系统起来 
+   (gdb) c
+   Continuing.
+   [New Thread 1163]
+   [Switching to Thread 1163]
+   Breakpoint 1, sys_init_module (umod=0xb7619000, len=226668, uargs=0x8053c20 "") at kernel/module.c:2597
+   2597        mod = load_module(umod, len, uargs);
+   (gdb) c
+   Continuing.
+   
+   #系统在Target机器上执行insmod kgdb_demo.ko，Developer则相应的在断点处被暂停，如下
+   Breakpoint 1, sys_init_module (umod=0x804b018, len=27643, uargs=0x804b008 "") at kernel/module.c:2597
+   2597        mod = load_module(umod, len, uargs);
+   #配合使用s(tep) n(ext) f(inish)等命令进入所要调试的模块，定位问题所在
+
+===================================KGDB调试内核模块 说明================
+#说明:
+调试内核模块的非init函数相对比较简单，只要先在target上执行insmod kgdb_demo.ko，这时由于模块的符号被加载，可以直接在Developer的gdb中对想调试的模块函数设置断点，如bt foo_func，后面当foo_func被调用时就进入了调试状态。如果想调试内核模块的init函数，由于在执行insmod之前模块的符号还没有被加载，不能直接对模块的init函数设置断点，所以相对来说要困难一 些。可以采用两种变通的方法：1,采用上面介绍的在内核调用模块的init函数被调用之前的某处插入断点，如bt sys_init_module()或b kernel/module.c:2597；2,在Developer上让内核处于运行状态，在Target上先执行一遍insmod kgdb_demo.ko，这时kgdb_demo.ko的符号已经被加载到内存中，可以直接在Developer的gdb中对模块的init函数设置断点，如bt mod_init，然后在target上rmmod kgdb_demo.ko，当下次在target上重新加载kgdb_demo.ko时就进入了调试状态，developer在mod_init处被暂停。
