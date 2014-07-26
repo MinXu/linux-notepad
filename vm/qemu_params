@@ -1,0 +1,174 @@
+				Qemu ARM Emulator使用参数
+==================================================================================================
+http://www.server110.com/qemu/201403/7254.html
+
+==================================================================================================
+1) qemu-system-arm -kernel zImage -initrd rootfs.cramfs -append “init=/linuxrc”
+   #每次zImage和rootfs修改后首先build出来，直接作为参数传入QEMU，方便快捷。
+   #此方式原理是，QEMU内置了一个很精简的bootloader，作用类似于u-boot。zImage、rootfs和传递给kernel的参数（append后字串）直接被QEMU加载进虚拟机内存的相对位置，并从kernel第一条语句开始执行。kernel成功引导后就会挂载rootfs，并从文件系统的/linuxrc脚本开始执行初始化动作。
+
+
+
+==================================================================================================
+2) qemu-system-arm -kernel zImage -append "console=ttyS0 root=/dev/nfs nfsroot=127.0.0.1:/root/nfs rw  init=/linuxrc ip=dhcp nousb" -rtc base=localtime -serial stdio
+   #用户不写-net的情况下，QEMU默认会追加上“-net nic -net user”。
+      #-net nic表示为虚拟机创建一个虚拟网卡
+      #-net user表示QEMU使用user模式，什么是user模式，请见-net章节。
+      #root=/dev/nfs指定根文件系统的挂载点，是在QEMU Guest OS上的位置
+      #nfsroot=127.0.0.1:/root/nfs是指NFS在网络上的位置
+      #ip=dhcp指定QEMU Guest OS的ip分配方式
+
+总的引导过程就是，kernel引导完成就会通过寻找网关为Guest OS分配ip，然后与NFS建立连接，再把根文件系统挂载起来。
+
+
+   #启动NFS服务过程举例：
+      #1. 修改/etc/export文件，增加一行“/root/nfs/ *(rw,insecure,sync,no_root_squash)”
+         #注意insecure很重要，保证本地访问NFS
+         #*表示允许任何ip地址访问NFS
+         #rw指NFS盘可读可写
+         #sync指同步写入到磁盘上
+         #no_root_squash指root用户访问则给予root权限
+
+      #2. 使用命令$exportfs –av
+         #使用命令$service nfs restart
+
+      #3. 如果使用本地NFS，那么只要配置好本地服务即可；如果是使用远程NFS，那么先确认你有网络，然后确认GuestOS能分到ip，最后网络模式参数要修改。-net user改为“-net tap...”，具体怎样改见-net章节。
+
+
+
+==================================================================================================
+3) -pflash bootstrap.bin -mtdblock firmware -serial stdio -m 32M
+   #当你要运行qemu的时候，拿出已经build好的bootstrap.bin和firmware即可。注意firmware必须是nand build方式产生的。
+   #bootstrap放在nor flash（-pflash）里，firmware放在nand flash（-mtdblock）里，可以注意到上面传参方式的差别。
+   #firmware里面包含3部分：u-boot、kernel和rootfs，另外还有一个空白空间，每个部分占用一个逻辑分区。
+
+   #方法是bootstrap+uboot+kernel+rootfs
+
+   #启动过程如下：
+      #1. bootstrap.bin会被加载到memory的0地址，并开始运行
+      #2. bootstrap从nand里面取出u-boot放到memory并运行
+      #3. u-boot为kernel设置好传入参数和环境变量，将kernel从nand取出，加载到内存并运行。
+      #4. kernel从nand挂载rootfs，完成初始化动作
+      #5. rootfs脚本将nand空白分区挂载到etc目录，完成启动。
+
+
+
+
+==================================================================================================
+4) -kernel zImage -serial stdio -mtdblock firmware -append "console=ttyS0 init=/linuxrc root=/dev/mtdblock4" -net nic,macaddr=00:14:78:00:01:03 -old-param
+   #方法是qemu bootloader+kernel+rootfs(bootloader要代劳u-boot了)。
+
+   #u-boot怎样传参，我们就怎样传参给kernel。这里有几个要注意的：
+      #1. root=/dev/mtdblock4 rootfs在nand的第4个分区，那么挂载点要变一下咯～
+      #2. -old-param uboot使用旧式方法传参，也就是将参数排到内存的固定地址(0x100)，那么我们也照办。
+      #3. -net nic,macaddr=00:14:78:00:01:03 u-boot通过serial_low和serial_high环境变量传给kernel mac地址，所以我们对qemu代码的boot过程做了一点小修改，将mac地址参数值存放到serial_low和serial_high的对应位置。（注意：使用了-old-param，这个参数才会有效）
+     #顾名思义，后面跟kernel档。可以是zImage、uImage、Image、u-boot.elf、u-boot.bin。
+
+
+==================================================================================================
+5.2    -initrd
+   #后面跟文件系统，支持的格式有很多如cramfs、jffs、cpio，能否挂载起来要看kernel支不支持。
+
+==================================================================================================
+5.3    -append
+   #kernel的启动参数，后面最好用引号（”）引起来。常用的kernel参数如下：
+
+      #1.         console：常与qemu的-serial搭配使用。常见取值有
+         #a) ttyS0：串口0
+         #b) ttyS1：串口1
+         #c) ttyAMA0：调试kernel的终端
+         #d) tty0：虚拟终端0
+         #e) tty1：虚拟终端1
+      #2. root，指定根文件系统的挂载点，常用取值有
+         #a) /dev/ram：文件系统在内存里
+         #b) /dev/ram0：文件系统在内存里
+         #c) /dev/nfs：NFS文件系统
+         #d) /dev/mtdblock*：文件系统在nand里。*的值看分区方式
+      #3. ramdisk_size=%dK
+         #a) ramdisk默认8192K，如果实际size大于8192则引导时会报出错误
+         #b) 通过此参数来指定实际大小，与rootfs文件大小一致
+         #4. nfsroot
+         #a) 是NFS文件系统才有用，用来指定NFS所在位置
+         #b) 值的格式为：[IP]:/[FOLDER PATH]。eg.”nfsroot=172.21.2.76:/root/SONiX_NFS”，IP在root server确定时可以省略。
+      #5.         rw
+         #a) 文件系统读写权限，这里是可读可写
+         #b) 其他可选值有ro
+      #6.         init
+         #a) 挂载根文件系统后第一个执行的程序或脚本
+         #b) 常见的有/sbin/init，/linuxrc，/usr/init，因具体文件系统而异
+      #7.         ip：值格式为
+         #a) [ip] : [boot/root server ip] : [gateway ip] : [netmask]。 eg.”ip=10.0.2.15:10.0.2.2:10.0.2.1:255.255.255.0”
+         #b) 可以自动分配的话写为”ip=dhcp”即可
+      #8. nousb
+         #a) 不启用usb功能
+
+5.4    -old-param
+   #设定kernel传参方式，目前是为了向kernel传入macaddr信息
+
+5.5    -rtc
+   #用于设定系统时间，格式如下
+   #-rtc [base=utc|localtime|date][,clock=host|vm]
+   #常用的是-rtc base=localtime
+
+5.6    -serial dev
+   #指定qemu内串口数据的输出方向，dev的取值：
+      #stdio 标准IO
+      #vc   虚拟终端
+      #pty  伪tty
+      #null  空设备
+      #/dev/XXX 使用主机的tty，如/dev/ttyS0 /dev/parportN
+      #filename 写入文件
+
+      #通常我们取值stdio，这样就能够在控制台输出了。
+
+5.7    -net
+   #用于设定网络模式，一般有两种模式：user和tap
+   #默认为user模式，缺省参数为”-net user -net nic”
+
+   #网络选项：
+
+5.7.1   -net nic[,vlan=n][,macaddr=addr]
+   #用来设定虚拟网卡，
+   #目前n的取值可以为0～7
+   #addr形式为00:14:07:00:01:03，当局域网络限制mac时，此功能很有用
+
+5.7.2   -net user[,vlan=n]
+   #全部参数如下：
+      #-net user[,vlan=n][,name=str][,net=addr[/mask]][,host=addr][,restrict=y|n]
+      #      [,hostname=host][,dhcpstart=addr][,dns=addr][,tftp=dir][,bootfile=f]
+      #      [,hostfwd=rule][,guestfwd=rule][,smb=dir[,smbserver=addr]]
+   #用来设定guest os为user模式。
+   user模式其实是QEMU虚拟的NAT模式。原理图如下：
+
+ 
+   #此模式下Host数据通过QEMU流入guest os时，host ip被解释为虚拟的ip。
+   #默认情况下，local ip:10.0.2.15 host ip:10.0.2.2 DHCP server:10.0.2.15 DNS server:10.0.2.3
+   #此模式只可实现Guest OS与Host OS的单向通信，即Guest OS可以访问Host OS的端口，但反过来就不行。怎样才能可以呢？
+   #我们有如下参数可以配合user mode使用：
+      -redir [tcp|udp]:host-port:[guest-host]:guest-port
+   #此法将连接到主机端口host-port的tcp或udp连接重定向到客户机端口guest-port上。guest-host未指定则默认值为10.0.2.15(DHCP默认地址)。
+      #eg.
+         #$qemu-system-arm -redir tcp :5555::23 [...]
+         #$telnet localhost 5555
+         #这样host就能够通过本机端口来访问qemu guest os的端口了。
+         #但此法也有不便之处：只能静态映射端口，动态端口绑定就不给力了。
+
+5.7.3   -net tap[,vlan=n][,fd=h][,ifname=name][,script=file] [,downscript=file]
+   #用来设定guest OS为tap模式，在此模式下Guest OS能与任何网内机器互访。
+   #此法需要host机配置网桥。原理图如下：
+
+ 
+5.7.4   -net socket[,vlan=n]
+   #全部参数如下：
+      #-net socket[,vlan=n][,name=str][,fd=h][,listen=[host]:port][,connect=host:port]
+      #          connect the vlan 'n' to another VLAN using a socket connection
+
+      #-net socket[,vlan=n][,name=str][,fd=h][,mcast=maddr:port]
+      #          connect the vlan 'n' to multicast maddr and port
+
+      #此模式用于两个或多个QEMU的VLan远程连接
+5.8    -pflash
+   #模拟nor flash设备卡,一般传入bootstrap.bin
+5.9    –mtdblock
+   #模拟nand flash设备卡，一般传入烧写的firmware
+
