@@ -53,8 +53,12 @@ elif [ $1 = image ];then
       #默认情况下，local ip:10.0.2.15 host ip:10.0.2.2 DHCP server:10.0.2.15 DNS server:10.0.2.3
 
    #-redir [tcp|udp]:host-port:[guest-host]:guest-port 
-      #qemu-system-arm -redir tcp :5555::23
-      #telnet localhost 5555
+      #1) qemu-system-arm -redir tcp :5555::23
+          #telnet localhost 5555
+      #2) qemu-system-arm -redir tcp :5555::22
+          #ssh localhost -p 5555
+      #3) qemu-system-arm -redir tcp :5555::3389
+          #rdesktop localhost:5555
 
 else
 	echo "vm start.sh"
