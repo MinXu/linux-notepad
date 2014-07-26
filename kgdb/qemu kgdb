@@ -24,7 +24,7 @@
    set remotebaud 115200
 
    #连接到调试系统
-   #target remote localhost:4321
+   target remote localhost:4321
 
    #当调试系统就绪时，会有如下信息
    #Remote debugging using localhost:4321
@@ -42,12 +42,9 @@
    #在目标系统上输入
    echo g > /proc/sysrq-trigge
 
-===========================================Install QEMU==============================================================================
+===========================================Debug with QEMU gdbserver=========================================================================
 #使用qemu gdb-stub使用：
 #A Qemu debug memo 
-
-#0) 安装qemu
-   sudo apt-get install qemu qtemu
 
 #1) 创建rootfs img
    qemu-img create rootfs.img 5G 
@@ -59,11 +56,12 @@
 
 #3) 启动qemu  (-S 让qemu停止,并等待gdb的链接)
    qemu -kernel export/common_pc-bzImage-WR2.0zz_cgl -hda rootfs.img -append "root=/dev/hda" -S
-
+      #-s －－> Shorthand for -gdb tcp::1234, i.e. open a gdbserver on TCP port 1234
+      #-S －－> Do not start CPU at startup (you must type 'c' in the monitor)
 #4) 在qemu窗口输入
    ctrl+alt+2  切换到qemu 控制台
-   输入gdbserver 6443
-
+   输入gdbserver 6443   [若使用了-s参数则无需此步]
+   ctrl+alt+1  切换回vm 控制台
 #5) 启动gdb
    gdb common_pc-vmlinux-symbols-WR2.0zz_cgl
    >target remote  127.0.0.1:6443
