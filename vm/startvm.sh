@@ -59,7 +59,10 @@ elif [ $1 = image ];then
           #ssh localhost -p 5555
       #3) qemu-system-arm -redir tcp :5555::3389
           #rdesktop localhost:5555
-
+      #4) qemu-system-arm -smb /share_dir
+	  #mount -t cifs -o username=min,password=min //10.0.2.2/min local_dir
+      #5) qemu-system-arm -vnc :1 -daemonize -usbdevice tablet 
+	  #vncview localhost:1
 else
 	echo "vm start.sh"
 	echo "please input the paramter"
