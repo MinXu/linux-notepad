@@ -1,0 +1,22 @@
+sudo apt-get install ia32-libs
+sudo apt-get install zlib1g-dev
+find . -name ".svn" -exec rm -rf {} \;
+//make -C script clean
+make prepare
+4
+make menuconfig
+make ssdk
+make ssdk_install
+//make tools_clean
+//make tools
+make user
+make opensource
+make ssap
+make ssap_install
+make apps
+make apps_install
+make opensource
+make opensource_install
+make rootfs
+make romfs
+

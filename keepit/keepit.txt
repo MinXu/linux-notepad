@@ -1,0 +1,724 @@
+sudo cp /etc/apt/source.list /etc/apt/source.list_bak
+sudo gedit /etc/apt/source.list
+
+deb http://mirrors.163.com/ubuntu/ precise main restricted
+deb-src http://mirrors.163.com/ubuntu/ precise main restricted
+deb http://mirrors.163.com/ubuntu/ precise-updates main restricted
+deb-src http://mirrors.163.com/ubuntu/ precise-updates main restricted
+deb http://mirrors.163.com/ubuntu/ precise universe
+deb-src http://mirrors.163.com/ubuntu/ precise universe
+deb http://mirrors.163.com/ubuntu/ precise-updates universe
+deb-src http://mirrors.163.com/ubuntu/ precise-updates universe
+deb http://mirrors.163.com/ubuntu/ precise multiverse
+deb-src http://mirrors.163.com/ubuntu/ precise multiverse
+deb http://mirrors.163.com/ubuntu/ precise-updates multiverse
+deb-src http://mirrors.163.com/ubuntu/ precise-updates multiverse
+deb http://mirrors.163.com/ubuntu/ precise-backports main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ precise-backports main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ precise-security main restricted
+deb-src http://mirrors.163.com/ubuntu/ precise-security main restricted
+deb http://mirrors.163.com/ubuntu/ precise-security universe
+deb-src http://mirrors.163.com/ubuntu/ precise-security universe
+deb http://mirrors.163.com/ubuntu/ precise-security multiverse
+deb-src http://mirrors.163.com/ubuntu/ precise-security multiverse
+deb http://extras.ubuntu.com/ubuntu precise main
+deb-src http://extras.ubuntu.com/ubuntu precise main
+
+sudo apt-get update 
+sudo apt-get upgrade
+lspci -l
+===================================update soruce change=====================================================
+
+sudo apt-get install compiz
+sudo apt-get install compiz-plugins-extra
+general options -> desktop size 4.1.4
+effects choose something
+and sudo apt-get install docky(仿照苹果 下工具栏)
+问题处理：
+1.如果左边工具栏消失 -->compizConfig settings Manager(terminal->ccsm)--》desktop->ubuntu unity plugin 必须打开
+2.            或者  -->rm -rf .config/compiz* .gconf/apps/compiz*   ;killall gnome-session
+3.system settings->apperance-->behavior 左边工具栏自动消失
+===================================3d desktop=====================================================
+
+language support
+ibus-setup
+===================================chinese input=====================================================
+find ./ -type f -exec ls -l {} \;
+find ./ -name "aaa"|xargs grep -i 'desktop s';
+grep path -nr 'name'
+sudo chmod chroot .
+**************************************grep and find****************************************************************
+sudo apt-get install vim vim-gtk//图形界面vim
+家目录下 .vimrc 
+or /etc/vim/.vimrc
+===========================================vim gvim========================================================
+mount -t iso9660 -o loop xxx.iso /some/path
+mount -o loop xxx.iso /some/path
+==============================mount iso====install qnx============================================================
+
+
+
+sudo apt-get install samba
+sudo apt-get install smbfs
+/*sudo apt-get install smbclient*/
+sudo /etc/init.d/smbd start
+sudo /etc/init.d/smbd stop
+vim /etc/samba/smb.conf
+[share]
+	path = /home/share
+	available = yes
+	browsable = yes
+	public = yes
+	writable = yes
+
+[xumin]
+	path = /home/xumin
+	available = yes
+	browsable = yes
+	public = yes
+	writeable = yes
+	valid users = xumin
+
+(useradd or adduser)
+smbpasswd -a xumin
+sudo /etc/init.d/smbd restart
+=======================================samba==========================================================================
+
+apt-get install ssh
+scp (-r) somebody@xx.xx.xx.xx:/path /path
+=======================================ssh=============================================
+
+apt-get install g++
+=======================================g++=============================================
+
+gzip filename
+gunzip filename.gz
+**************************************gunzip***************************************************************
+
+telnetd
+1. sudo apt-get install xinetd telnetd
+2. /etc/inetd.conf
+telnet stream tcp nowait telnetd /usr/sbin/tcpd /usr/sbin/in.telnetd
+/etc/xinetd.conf
+# log_type = SYSLOG daemon info
+instances = 60
+log_type = SYSLOG authpriv
+log_on_success = HOST PID
+log_on_failure = HOST
+cps= 25 30
+}
+/*unused
+3. /etc/xinetd.d/telnet
+service telnet
+{
+disable = no
+flags = REUSE
+socket_type = stream
+wait = no
+user = root
+server = /usr/sbin/in.telnetd
+log_on_failure+=USERID
+}
+*/
+4. sudo /etc/init.d/xinetd restart
+5. netstat -av
+6. mv /etc/securetty /etc/securetty.bak
+#auth required lib/security/pam_securetty.so
+
+
+8. ŒÓÉè·À»ðÇœ/etc/hosts.allow(deny)»úÖÆ£º
+/etc/hosts.deny
+in.telnetd:192.168.0.1,192.168.0.2:allow
+/etc/hosts.allow
+
+
+9.ŒÓÉè·À»ðÇœiptables£º
+Èç¹ûÏëÒªÕë¶Ô192.168.0.0/24ÕâžöÍø¶ÎŒ°61.xxx.xxx.xxxÕâžöIPœøÐÐtelnet¿ª·Å£¬¿ÉÒÔÔöŒÓÏÂÃæŒžÐÐ¹æÔò£º
+/sbin/iptables -A INPUT -p tcp -i eth0 -s 192.168.0.0/24 --dport 23 -j ACCEPT
+/sbin/iptables -A INPUT -p tcp -i eth0 -s 61.xxx.xxx.xxx --dport 23 -j ACCEPT
+/sbin/iptables -A INPUT -p tcp -i eth0 --dport 23 -j DROP
+
+===============================================telnet====================================================================
+/*  I used the xinetd not the inetd for tftp
+/etc/inetd.conf
+telnet stream tcp nowait telnetd /usr/sbin/tcpd /usr/sbin/in.telnetd
+tftp dgram udp wait nobody /usr/sbin/tcpd /usr/sbin/in.tftpd /home/tftpd
+*/
+
+
+1、安装server与client
+sudo apt-get install tftpd-hpa tftp-hpa
+2、删除standalone的启动方式
+不要做这一步骤update-rc.d -f tftpd-hpa remove
+3、新建用户tftpd及其主目录
+mkdir /home/tftpd
+chwon nobody:nogroup /home/tftpd
+chmod 0777 /home/tftpd
+sudo useradd -s /bin/false -g nogroup -d /home/tftpd [-p PASSWORD] tftpd
+4、新建xinetd启动文件
+cat /etc/xinetd.d/tftpd
+service tftp
+{
+        disable         = no
+        socket_type     = dgram
+        wait        = no
+        user        = root
+        protocol         = udp
+        server         = /usr/sbin/in.tftpd
+        server_args     = -s /home/tftpd -p -c  -U 077 -u tftpd
+        log_on_success    += PID HOST DURATION
+        log_on_failure    += HOST
+}
+5、注释掉/etc/inetd.conf文件中tftpd启动
+#tftp    dgram   udp     wait    root  /usr/sbin/in.tftpd /usr/sbin/in.tftpd -s /var/lib/tftpboot
+6、重新启动xinetd服务
+sudo /etc/init.d/xinetd restart
+7、测试tftpd服务是否成功
+tftp localhost
+tftp> put 123.log
+tftp> put 123.log test.log
+tftp> get test.log
+tftp> get test.log abc.log
+tftp> verbose
+Verbose mode on.
+tftp> trace
+Packet tracing on.
+tftp> put kkk.log
+sent DATA
+received ACK
+.........
+sent DATA
+received ACK
+Sent 12999997 bytes in -1.5 seconds [-69987938 bit/s]
+恭喜，您的tftpd安装成功了！
+===========================================tftp==========================================================
+
+vim /etc/xinetd.d/ftpd
+service ftp
+{
+disable = no
+flags = REUSE
+socket_type = stream
+wait = no
+user = root
+server = /usr/sbin/proftpd
+server_args = -c /etc/proftpd/proftpd.conf
+log_on_success += DURATION USERID
+log_on_failure += USERID
+}  
+
+service ftp
+{
+　　　 id=ftp
+　　　 socket_type=stream
+　　　 protocol=tcp
+　　　 wait=no
+　　　 user=root
+　　　 log_on_success+=USERID
+　　　 log_on_failure+=USERID
+　　　 server=/usr/sbin/in.proftpd
+　　　 server_args=-1 –a
+} 
+
+vim /etc/proftpd/proftpd.conf
+ServerType			inetd
+open the anonymous
+mkdir /home/ftpd
+chwon nobody:nogroup /home/ftpd
+chmod 0777 /home/ftpd
+sudo useradd -s /bin/false -g nogroup -d /home/ftpd ftpd
+===========================================ftp==========================================================
+sudo apt-get install vsftpd
+vim /etc/services (21/tcp)修改端口-->(2121/tcp)
+vim /etc/xinetd.d/vsftp
+	service ftp
+	{
+	    socket_type = stream
+	    wait = no
+	    user = root
+	    server = /usr/sbin/vsftpd
+	    log_on_success += DURATION
+	    nice = 10
+	    disable = no
+	} 
+vim /etc/vsftp.conf
+	#listen=YES
+	#listen_ipv6=YES
+	anonymous_enable=YES
+	local_enable=YES
+	write_enable=YES
+	local_umask=022
+	dirmessage_enable=YES
+	use_localtime=YES
+	xferlog_enable=YES
+	connect_from_port_20=YES
+	chroot_local_user=YES
+	secure_chroot_dir=/var/run/vsftpd/empty
+	pam_service_name=vsftpd
+	rsa_cert_file=/etc/ssl/private/vsftpd.pem
+	listen_port=21
+	#listen_port=2121
+	anon_root=/home/ftpd
+useradd -d /home/ftpd -s /sbin/nologin ftp
+passwd ftp
+chmod 0755 /home/ftpd
+===========================================vsftp========================================================
+logger
+cat /var/log/xxx
+=============================================syslog============================================================
+
+sudo apt-get install vnc4server vncviewer
+vncserver :20
+vncpasswd
+vncserver -kill :20
+vncserver -depth 32
+vncviewer hostip:32
+注意 ：vnc和compiz冲突 无法显示桌面
+===================================================vnc 远程桌面=======================
+sudo ssh -X (-Y)  user@xx.xx.xx.xx
+=============================================linux远程桌面=========================
+Xmanage
+Xming+Putty
+==============================================win32远程桌面====================================
+sudo apt-get kubuntu-desktop 安装kde
+sudo apt-get gnome
+sudo dpkg-reconfig kdm(gdm/lightdm)自动切换
+===================================================图形界面切换===================================================
+安装方法：
+sudo apt-get pidgin
+
+sudo add-apt-repository ppa:lainme/libqq
+sudo apt-get update
+sudo apt-get install libqq-pidgin
+然后在Empathy和Pidgin中添加QQ帐号就很简单了，这里就略过了。
+刚开始安装了LibQQ后发现pidgin的QQ协议找不到了，google了老一会发现原来更新最新版的Pidgin就行了：
+
+sudo add-apt-repository ppa:pidgin-developers/ppa
+sudo apt-get update
+sudo apt-get install pidgin
+
+这样就可以使用Pidgin和Empathy来进行QQ聊天了，不过还是觉着WebQQ要好用一些
+
+ 
+
+如果不想使用这个PPA源了，可以删除
+
+sudo add-apt-repository -r ppa:lainme/libqq
+===============================================pidgin====================================================
+boot-mkimage
+fdisk fromat sdcard
+===============================================format sdcard==================================================
+
+/sbin/service crond start //启动服务
+/sbin/service crond stop //关闭服务 　　
+/sbin/service crond restart //重启服务 　　
+/sbin/service crond reload //重新载入配置
+在/etc/rc.d/rc.local这个脚本的末尾加上/usr/sbin/service cron start
+
+crontab -u //设定某个用户的cron服务，一般root用户在执行这个命令的时候需要此参数 　　crontab -l //列出某个用户cron服务的详细内容 　　
+crontab -r //删除某个用户的cron服务 　　
+crontab -e //编辑某个用户的cron服务
+
+格式：*/1 * * * * ls >> /tmp/ls.txt 　　
+crontab文件的格式：M H D m d cmd. 　　
+M: 分钟（0-59）。 　　
+H：小时（0-23）。 　　
+D：天（1-31）。 　　
+m: 月（1-12）。 　　
+d: 一星期内的天（0~6，0为星期天）。
+
+除了数字还有几个个特殊的符号就是"*"、"/"和"-"、","，*代表所有的取值范围内的数字，"/"代表每的意思,"*/5"表示每5个单位，"-"代表从某个数字到某个数字,","分开几个离散的数字。
+
+cron自动在/var/spool/cron下生成一个与此用户同名的文件
+编辑/etc/crontab 文件配置cron
+(用crontab配置是针对某个用户的，而编辑/etc/crontab是针对系统的任务。)
+
+==============================================crond task============================================================
+sudo apt-get install bridge-utils vlan
+==============================================vlan brctl==========================================================
+sudo apt-get install ia32-libs
+sudo apt-get install zlib1g-dev
+apt-get install libncurses5-dev
+=============================================64bit>>>32bit============================================================
+
+
+
+
+===============================================fedaro 17====================================
+passwd root root
+==================================================change the root passwd===================
+
+sudo yum install axel && sudo yum -y install yum-fastestmirror && sudo yum upgrade
+====================increase rate the yum and search the faster yum mirror=========================
+
+安装所有gnome-shell 扩展
+sudo yum install gconf-editor gnome-tweak-tool
+sudo yum install gnome-shell-extension*
+=================================================菜单中加入关机按钮============================================
+
+software update 
+================================================update software==============================
+
+sudo mount -o loop iso directory
+==============================================添加本地源==========================================
+下载tar包 解压缩
+==firefox&chrome==
+cp libflashplayer.so /etc/skel/.mozilla/plugins
+cp -r usr/* /usr
+==opera==
+sudo mv libflashplayer.so /usr/lib64/opera/plugins/
+=====================================friefox plugin 安装======================================================
+
+yum clean all
+rm -rf /var/cache/yum
+yum update
+//yum makecache
+/etc/yum/pluginconf.d/fastestmirror.conf
+里面添
+exclude=mirrors.163.com
+=========================================yum update===============================================================
+
+sudo yum install libreoffice
+=========================================update office================================================
+
+去google 官网 下载chrome  如果firefox可以播放视频，chrome就可以播放。
+去官网下载opera 点击安装
+官网下的有点问题，视频不能全屏，在remove/add software 里面安装了beta版本
+卸载 需要删除：
+rm -rf /opt/google/chrome
+rm -rf ~/.cache/google-chrome
+rm -rf ~/.config/google-chrome
+========================================install chrome  and opera============================================
+
+sudo rpm -ivh http://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-stable.noarch.rpm http://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-stable.noarch.rpm
+
+rpm --import http://ATrpms.net/RPM-GPG-KEY.atrpms
+
+sudo yum install ffmpeg ffmpeg-libsgstreamer-ffmpeg xvidcore libdvdread libdvdnav lsdvd gstreamer-plugins-goodgstreamer-plugins-bad gstreamer-plugins-ugly
+=============================================安装解码器 rpmfusion源==================================================
+改变启动顺序以及grub2 配置技巧
+这是一个默认启动Windows的例子：
+1. 首先找到Windows的menuentry.
+# cat /boot/grub2/grub.cfg | grep Windows
+结果：
+menuentry "Windows 7 (loader) (on/dev/sda1)" --class windows --class os {
+2. 设置Windows 作为默认的启动项（这儿只能使用上面命令输出中双引号“”或者单引号‘‘中的内容)
+# grub2-set-default "Windows 7(loader) (on /dev/sda1)"
+3. 验证默认启动项
+# grub2-editenv list
+输出：
+saved_entry=Windows 7 (loader) (on/dev/sda1)
+4. 生成，更新 grub.cfg (可选）
+下面的命令会使用/etc/grub.d下的自动配置脚本和/etc/default/grub中定义的变量，自动生成GRUB2配置文件（包括在/boot下的内核）， -o 指定输出文件，/boot/grub2/grub.cfg是默认配置文件。如果是多系统，它会自动的把它们找出来，加入到启动菜单列表中去。
+ 
+# grub2-mkconfig -o /boot/grub2/grub.cfg
+/etc/default/grub 中可以配置timeout，背景图片等。
+如：
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="Fedora"
+GRUB_DEFAULT=saved
+GRUB_CMDLINE_LINUX="rd.md=0 rd.lvm=0rd.dm=0 KEYTABLE=us quiet SYSFONT=latarcyrheb-sun16 rhgb rd.luks=0LANG=en_US.UTF-8"
+GRUB_BACKGROUND=/boot/grub2/background.png
+GRUB_TERMINAL_OUTPUT=gfxterm
+GRUB_THEME=/boot/grub2/mytheme/theme.txt
+================
+备注：下面的命令设置Fedora作为默认启动项：
+ 
+# cat /boot/grub2/grub.cfg |grep Fedora
+结果：
+menuentry 'Fedora Linux, with Linux3.1.2-1.fc16.i686.PAE' --class fedora --class os {
+menuentry 'Fedora Linux, with Linux3.1.1-1.fc16.i686.PAE' --class fedora --class os {
+menuentry 'Fedora Linux, with Linux3.1.0-7.fc16.i686.PAE' --class fedora --class os {
+ 
+# grub2-set-default "Fedora Linux,with Linux 3.1.2-1.fc16.i686.PAE"
+# grub2-editenv list
+# grub2-mkconfig -o /boot/grub2/grub.cfg
+==========================================改变启动顺序以及grub2 配置技巧======================================================
+
+关掉SELinux:修改/etc/selinux/config。设置SELINUX=disabled
+============================================关闭selinux=======================================================
+ibus 设置为默认启动： input method selector
+==========================================ibus================================================
+yum groupinstall kde-desktop
+yum --enablerepo=kde-testing groupupdate kde-desktop
+yum update
+开机界面有选择登陆 session :gnome or kde
+=========================================kde========================================
+yum groupinstall xfce-desktop
+=========================================xfce========================================
+yum -y install gcc gcc-c++
+=========================================gcc====g++======================================
+yum install ktorrent
+========================================bt download======================================
+yum -y insatll ncurses-devel yasm
+yum -y install ffmpeg-devel libid3tag-devel libmad-devel
+yum -y install zlib-devel jack-audio-connection-kit-devel alsa-lib-devel
+==========================================mplayer,kmplayer======================================
+sudo yum install samba
+===============================================samba=====================================
+sudo yum install putty
+===============================================putty====================================
+sudo yum install tftp-server tftp xinetd
+
+mkdir /home/tftpd
+chown nobody:nobody tftpd
+chmod 0777 tftpd
+
+vim /etc/xinet.d/tftp
+    service tftp
+    {
+	socket_type		= dgram
+	protocol		= udp
+	wait			= yes
+	user			= root
+	server			= /usr/sbin/in.tftpd
+	server_args		= -s /home/tftpd/ -c
+	disable			= no
+	per_source		= 11
+	cps			= 100 2
+	flags			= IPv4
+     }
+
+service xinetd restart					  
+/etc/selinux/config
+	selinux = disable
+sudo setenforce 0
+
+firewall(图像界面):add ftp tftp samba etc.
+
+sudo service xinetd restart
+===============================================tftp===========================================
+sudo yum install telnet telnet-server
+vim /etc/xinet.d/telnet
+	disable = no
+sudo mv /etc/securetty /etc/securetty_bak
+**********************************************************************************************
+在Fedora Core 3里Telnet服务默认是不安装并不启动的，取而代之的则是SSH，由于SSH有更好的安全性。但是Windows还没有自带SSH连接工具，所以Telnet有的时候还是有用的。
+ 
+Linux提供服务是由运行在后台的守护程序（daemon）来执行的。守护进程的工作就是打开1个端口（port），等待（listen）进入的连接。在C/S模式中，如果客户提请了1个连接，守护进程就创建（fork）子进程来响应这个连接，而父进程继续监听其他服务的请求。
+　　但是，对于系统所提供的每1个服务，如果都必须运行1个监听某个端口连接发生的守护程序，那么通常意味着系统资源的浪费。为此，引入“扩展的网络守护进程服务程序”xinetd（xinetd internet daemon）。telnet服务也是由xinetd守护的。
+一、安装telnet软件包(通常要两个）
+
+检测telnet、telnet-server的rpm包是否安装（我的系统是Fedora core6）
+[root@localhost root]#rpm -q telnet
+telnet-0.17-25 //telnet*.rpm是默认安装的//
+[root@localhost root]#rpm -q telnet-server
+显示为空 //telnet*.rpm是默认没有安装的//
+ 
+如果没有检测到软件包，需要进行安装，Fedora Core默认已安装了telnet软件包，一般只要安装telnet-server软件包。
+ 
+第5张盘上有telnet-server的RPM安装包（telnet-server-0.17-37.i386.rpm）
+[root@localhost root]#rpm -i telnet-server-0.17-37.i386.rpm
+ 
+或者可以从http://rpmfind.net/linux/rpm2html/search.php?query=telnet-server&submit=Search+...&system=&arch=下载相应的telnet-server软件包
+(telnet-server-0.17-37.i386.rpm 和 xinetd-2.3.14-8.i386.rpm)
+
+也可以使用yum -y install telnet-server 来安装该服务。
+二、启动telnet服务
+1、开启服务
+方法一：使用ntsysv,在出现的窗口之中，将 telnet前面*加上，然后按下 OK 。
+方法二：编辑 /etc/xinetd.d/telnet
+[root@wljs root]# vi /etc/xinetd.d/telnet
+找到 disable = yes 将 yes 改成 no 。
+2、激活服务
+telnet 是挂在 xinetd 底下的，所以自然只要重新激活 xinetd 就能够将 xinetd 里头的设定重新读进来，所以刚刚设定的 telnet 自然也就可以被激活。
+　　[root@wljs root]# service xinetd restart
+三、测试服务　　
+　　[root@wljs root]#telnet ip(或者hostname）
+　　如果配置正确，系统提示输入远程机器的用户名和密码
+　　Login:
+　　Password:
+　　注：默认只允许普通用户
+四、设置telnet端口
+#vi /etc/services
+进入编辑模式后查找telnet(vi编辑方式下输入/telnet)
+会找到如下内容：
+telnet 23/tcp
+telnet 23/udp
+将23修改成未使用的端口号(如：2000)，退出vi，重启telnet服务，telnet默认端口号就被修改了。
+五、Telnet服务限制　　
+　　如果原本的默认值你并不满意，那么你可以修改成比较安全一点的机制。假设你这个 Linux 是一部主机，而且他有两块网络接口，分别是对外的 192.168.0.1 与对内的210.45.160.17 这两个，如果你想要让对内的接口限制较松，而对外的限制较严格，你可以这样的来设定：
+　　#vi /etc/xinetd.d/telnet
+　　# 先针对对内的较为松散的限制来设定：
+　　service telnet
+　　{ disable　　　　= no　　　　　　　　 <==预设就是激活 telnet 服务
+　　bind 　　　　　 = 210.45.160.17　　　 <==只允许经由这个适配卡的封包进来
+　　only_from 　　　= 210.45.160.0/24　　　<==只允许 210.45.160.0/24 这个网段的主机联机进来使用 telnet 的服务
+　　.....
+　　}
+　　# 再针对外部的联机来进行限制
+　　service telnet
+　　
+　　{
+　　disable　　　　 = no<==预设就是激活 telnet 服务
+　　bind 　　　　　 = 192.168.0.1<==只允许经由这个适配卡的封包进来
+　　only_from 　　　= 192.168.0.0/16<==只允许 192.168.0.0 ~ 192.168.255.255 这个网段联机进来使用 telnet 的服务
+　　only_from 　　　= .edu.cn<==重复设定，只有教育网才能联机！
+　　no_access 　　　= 192.168.25.{10,26}<==不许这些 PC 登入
+　　access_times　　= 1:00-9:00 20:00-23:59 <==每天只有这两个时段开放服务
+　　......
+　　}
+六、Telnet root用户的登入　　
+　　root 不能直接以 telnet 连接上主机。 telnet 不是很安全，默认的情况之下就是无法允许 root 以 telnet 登入 Linux 主机的 。若要允许root用户登入，可用下列方法
+　　[root @test /root]# vi /etc/pam.d/login
+　　#auth required pam_securetty.so #将这一行加上注释！
+　　
+　　或
+　　# mv /etc/securetty /etc/securetty.bak
+　　这样一来， root 将可以直接进入 Linux 主机。不过，建议不要这样做。还可以在普通用户进入后，切换到root用户,拥有root的权限！
+===============================================telnet========================================
+/etc/xinet.d/vsftp
+  service ftp
+  {
+        disable = yes
+    socket_type = stream
+    wait = no
+    user = root
+    server = /usr/sbin/vsftpd
+    server_args = /etc/vsftpd/vsftpd.conf
+    log_on_success += DURATION
+    nice = 10
+  }
+
+vim /etc/vsfptd.conf(standalone)
+	anonymous_enable=YES
+	local_enable=YES
+	write_enable=YES
+	local_umask=022
+        dirmessage_enable=YES
+	xferlog_enable=YES
+	connect_from_port_20=YES
+        xferlog_file=/var/log/vsftpd.log
+	xferlog_std_format=YES
+        idle_session_timeout=600
+        data_connection_timeout=120
+        ftpd_banner=Welcome to blah FTP service.
+	chroot_local_user=YES
+	listen=YES
+ 	#listen_ipv6=YES
+	pam_service_name=vsftpd
+	userlist_enable=YES
+	tcp_wrappers=YES
+	listen_port=21
+        #listen_address=192.168.1.103
+	#anon_root=/home/ftpd
+********************************************************************************************************		
+vim /etc/services 
+	修改：
+		ftp	21/tcp--->ftp      2121/tcp
+*************************************xinetd*******************************************************************
+开机启动
+sudo vim /etc/rc.d/rc.local
+	#!/bin/bash
+        service vsftpd start
+sudo chmod +x /etc/rc.d/rc.local
+**********************************standup**********************************************************************
+useradd -d /home/ftpd -s /sbin/nologin ftp
+passwd ftp
+sudo service xinetd restart
+sudo service xinetd reload
+sudo netstat -npl		-->看进程监控端口
+sudo netstat -a|grep ftp        -->看ftp 是否listen
+/*图形界面附加信息（可以代替命令行）*/
+firewall-->修改iptables
+service-->使能ftp服务
+ntsysv -->同上 修改xinet.d
+===============================================vsftp===========================================
+1.sudo yum install wireshark(无桌面环境)
+2.add/remove software
+	gnome desktop intergration for wireshark(安装桌面环境)
+=========================================wireshark 需要另外安装桌面================================
+sudo yum install gcc kernel-devel kernel-headers
+https://www.virtualbox.org/wiki/Downloads 下载vbox and 扩展
+	rpm -ivh VirtualBox-1.5.6_28266_fedora8-1.i586.rpm
+sudo yum install dkms
+当系统安装了kernel-PAE时
+	sudo yum instlall kernel-PAE-devel
+sudo /etc/rc.d/init.d/vboxdrv setup
+（没做）sudo usermod -G vboxusers your_user_name
+device->install guest additions(为最大化窗口)
+==========================================VirtualBox=============================================
+空间分两个区C（状态为作用），D
+进入PE 最小系统 点击做面安装xp到C盘 
+重起开始安装系统
+==========================================install windows xp==========================================
+sudo yum install samba
+sudo vim /etc/samba/smb.conf
+[share]
+	path = /home/share
+	available = yes
+	browsable = yes
+	public = yes
+	writable = yes
+
+[xumin]
+	path = /home/xumin
+	available = yes
+	browsable = yes
+	public = yes
+	writeable = yes
+	valid users = xumin
+
+(useradd or adduser)
+smbpasswd -a xumin
+sudo service smb restart
+sudo service nmb restart
+===========================================samba===============================================
+sudo yum install gftp
+===========================================gftp================================================
+sudo yum install gvim
+===========================================gvim================================================
+sudo yum install -y tigervnc tigervnc-server
+vncserver :20
+vncpasswd
+vncserver -kill :20
+vncserver -depth 32
+vncviewer hostip:32
+===========================================vnc==================================================
+图形界面搜索Services -->控制服务开关  xinetd
+sudo ntsysv        -->同上
+以上两个等同于修改/etc/xinet.d/下的文件disable=yes/on
+===========================================控制xinetd配置文件============================================
+sudo yum install mkelfimage
+sudo yum install uboot-tools
+===========================================mkelfimage  mkimage=========================================
+x86_64-->i686_32
+sudo yum install glibc.i686
+sudo yum install zlib.i686 
+sudo yum install libncurses.so.5
+sudo yum install libstdc++.so.6
+
+lzma     to lzma e
+
+linux linux%_only:                      to                 linux:
+/ %/: prepare scripts FORCE            to             %/: prepare scripts FORCE
+config %config: scripts_basic outputmakefile FORCE       to             %config: scripts_basic outputmakefile FORCE
+
+#   lzma -9 $(obj)/vmlinux.bin      to        lzma e $(obj)/vmlinux.bin $(obj)/vmlinux.bin.lzma
+==============================================64bit>>>32bit=====================================================
+================================================RHEL=======================================================
+/etc/fstab
+         /mnt/xxxx.iso  /media/ISO    iso9660 r0,loop   0,0
+[Server]
+name=Server
+baseurl=file:///media/ISO/Server
+enabled=1
+gpgcheck=0
+
+[HighAvailability]
+name=HighAvailability
+baseurl=file:///media/ISO/HighAvailability
+enabled=1
+gpgcheck=0
+
+[LoadBalancer]
+name=LoadBalancer
+baseurl=file:///media/ISO/LoadBalancer
+enabled=1
+gpgcheck=0
+=================================================添加本地源=======================================================
+yum install "@Chinese Support"
+=================================================中文支持====================================================
+/etc/sudoers
+	xumin	ALL=(ALL)	ALL
+================================================用户添加sudo 权限=============================================

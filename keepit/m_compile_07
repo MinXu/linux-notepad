@@ -1,0 +1,38 @@
+sudo apt-get install ia32-libs
+sudo apt-get install zlib1g-dev
+apt-get install libncurses5-dev
+find . -name ".svn" -exec rm -rf {} \;
+*********ROOTDIR 找不到了****************
+grep -lr /home/xumin/m07c-new/Intellon/project/EoC699E2.4M07-C_V1.0/src . |xargs sed -i "s/\/home\/xumin\/m07c-new\/Intellon\/project\/EoC699E2.4M07-C_V1.0\/src/\$(ROOTDIR)/g"
+
+grep -lr /home/xumin/m07c-new/Intellon/project/EoC699E2.4M07-C_V1.0/src . |xargs sed -i "s/\/home\/xumin\/m07c-new\/Intellon\/project\/EoC699E2.4M07-C_V1.0\/src/\/home\/xumin\/M07\/trunk/g"
+
+rm -rf build
+rm -rf linux
+rm -rf .config
+****************删除目标文件*****************
+make prepare
+//make -C script clean
+make menuconfig
+*************1**snmp***关闭私有部分****2*drive tw 加星号******3*apps sntp加星号*****
+make opensource
+make ssap
+make ssap_install
+make opensource
+make opensource_install
+cd src/apps/mmead/mmelib
+make
+cd tools
+./build.mips.o.sh
+cd ../lib
+./build.mips.sh
+***********单编mmead************
+make apps
+make apps_install
+**********************************
+cd trunk/app
+make clean
+make
+************自动清除，可执行文件有权限，编译busybox,ramimage,ip175d,iptables,etc...******************
+make app_img
+
