@@ -63,6 +63,11 @@ elif [ $1 = image ];then
 	  #mount -t cifs -o username=min,password=min //10.0.2.2/min local_dir
       #5) qemu-system-arm -vnc :1 -daemonize -usbdevice tablet 
 	  #vncview localhost:1
+elif [ $1=xp ];then
+	sudo qemu-system-x86_64 -m 512 -hda /home/min/xp/xp.img  -enable-kvm -localtime  -boot d -redir tcp:53389::3389 -smp 2 -soundhw all -daemonize
+     #rdesktop localhost:3389
+#	sudo qemu-system-x86_64 -m 512 -hda /home/min/xp/xp.img  -enable-kvm -localtime  -boot d -redir tcp:53389::3389 -smp 2 -soundhw all -daemonize -vnc :1
+     #vncview localhost:1
 else
 	echo "vm start.sh"
 	echo "please input the paramter"
