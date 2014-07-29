@@ -1,0 +1,19 @@
+sudo apt-get install build-essential binutils python-dev libncurses5-dev  libcurl4-openssl-dev xorg-dev uuid-dev bridge-utils bison flex udev gettext bin86  bcc  iasl libgcrypt11-dev   libssl-dev pciutils libc6-dev-i386  gcc-multilib texinfo zlib1g-dev 
+sudo apt-get install gcc g++ make patch libssl-dev bzip2 gettext zlib1g-dev python libncurses5-dev libjpeg62-dev libx11-dev libgcrypt11-dev pkg-config bridge-utils bcc bin86 libpci-dev libsdl-dev python-dev texinfo libc6-dev uuid-dev bison flex fakeroot build-essential crash kexec-tools makedumpfile libncurses5 libncurses5-dev iasl gawk
+sudo apt-get install xen-hypervisor-4.4-amd64 xen-system-amd64 xen-tools xen-utils-4.4 xen-utils-common xenstore-utils xenwatch
+sudo apt-get install linux-image-server linux-headers-server linux-server
+sudo apt-get install virtinst python-libvirt virt-viewer virt-manager
+
+
+#163镜像站 
+/usr/sbin/virt-install --paravirt --name test --vcpus=1 --ram 512 --file=/u02/xenvm/test.img --file-size=51 --nographics --location http://mirrors.163.com/centos/5.6/os/x86_64/ --bridge=xenbr0 
+#半虚拟化安装： 
+/usr/sbin/virt-install --paravirt --name xen04 --vcpus=1 --ram 512 --file=/u02/xenvm/xen04.img --file-size=51 --nographics --location http://192.168.13.73/centos --bridge=xenbr0 
+#全虚拟化安装： virt-install -n cacti -r 512 --vcpus=1 --vnc --vncport=5909 --hvm --file=/u02/xenvm/cacti.img --file-size=50 --force -c /usr/local/src/cactiez-10.1-x86_64.iso --bridge=xenbr0
+
+
+dd if=/dev/zero of=xen01.img bs=2k seek=4096k count=1 /dev/zero
+dd if=/dev/zero of=swap.img bs=2k seek=512k count=1 
+
+dd if=/dev/zero of=xen.img bs=1M count=5000
+mkfs.ext4 -j xen.img
