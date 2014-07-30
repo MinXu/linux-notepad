@@ -32,7 +32,9 @@ sudo gedit ~/.bashrc ,在打开的.bashrc文件中添加下面这句话
 	Using API: Xen 0.9.8
 	Running hypervisor: Xen 4.1
 
-
+==================================================================
+http://www.cnblogs.com/liuyikang/p/3878583.html
+==================================================================
 sudo xen-create-image --hostname=workstation --dist=trusty --dir=/home/min/xenvm --mirror=http://http://mirrors.163.com/ubuntu --role=udev --verbose --pygrub --dhcp --passwd min
 
 
