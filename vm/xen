@@ -35,6 +35,9 @@ sudo gedit ~/.bashrc ,在打开的.bashrc文件中添加下面这句话
 ==================================================================
 http://www.cnblogs.com/liuyikang/p/3878583.html
 ==================================================================
+
+
+=========================================================PV===============================================================
 Install PV domu:
 
 sudo apt-get install xen-tools
@@ -88,7 +91,7 @@ Use this command to go inside the domU with username=root and password=yourpassw
 Press “Ctrl+]” will get you out of the vm console.
 
  
-
+==================================================HMV======================================================================
 Install HVM domU:
 
 The installation of HVM is much easier than that of a PV.
@@ -139,7 +142,7 @@ Use this command to open the VM.
 sudo xl vncviewer domu
 
 
-=========================install=========================================
+=========================My install=========================================
 #install:
 	sudo xen-create-image --hostname=workstation --dist=trusty --dir=/home/min/xenvm --mirror=http://http://mirrors.163.com/ubuntu --role=udev --verbose --pygrub --dhcp --passwd min
 
@@ -161,3 +164,9 @@ sudo xl vncviewer domu
 
 #vnc
 sudo xl vncviewer workstation
+
+#shutdown
+sudo xl shutdown workstation
+
+#destroy
+sudo xl destroy workstation
