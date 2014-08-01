@@ -180,3 +180,26 @@ sudo xl shutdown workstation
 
 #destroy
 sudo xl destroy workstation
+
+#save & restore
+sudo xl save workstation
+sudo xl restore workstation
+
+#pause & unpause
+sudo xl pause workstation
+sudo xl unpause workstation
+
+#memory
+sudo xl mem-set workstation <MEM>
+
+#cpu
+sudo xl vcpu-set workstation <VCPUs>
+
+#status
+sudo xentop
+sudo xl top
+
+#reboot vm
+sudo service xen restart
+sudo service xendomains restart
+
