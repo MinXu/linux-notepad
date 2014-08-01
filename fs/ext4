@@ -1,0 +1,2 @@
+dd if=/dev/zero of=xen.img bs=1M count=5000
+mkfs.ext4 -j disk.img
