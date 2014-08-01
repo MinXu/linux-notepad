@@ -14,4 +14,7 @@ tunctl_user xumin
 auto br0
 iface br0 inet dhcp
 bridge_ports tap0 eth0
+bridge_fd 9
+bridge_stp off
+bridge_maxwait 0
 
