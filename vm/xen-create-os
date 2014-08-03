@@ -1,0 +1,194 @@
+===========================================================================
+http://apt-blog.net/cheat-notes-about-using-xen-under-debian-ubuntu
+===========================================================================
+
+Home › 运维技术 › Unix/Linux › Debian/Ubuntu - Xen折腾秘笈
+Debian/Ubuntu - Xen折腾秘笈
+Posted on 2010/08/23 by BOYPT — 7 Comments ↓	
+
+作为秘籍，本文包含折腾Xen所必须了解，但是在一般能找到的教程里面都没提及的资料。这里不包含一些必须的步骤等，所以很可能你需要先浏览这些资料，并让浏览器同时开着这些页面随时查阅：
+
+    DebianWiki Xen
+    DebianWiki DebianInstaller/Xen
+    XenWiki HowTos
+    Ubuntu Doc/Xen
+    Ubuntu 9.04上的XEN虚拟服务器（一） 安装XEN （二） 安装虚拟机
+    在 Debian 上安装和配置 Xen
+
+===========================================================================
+一：Xen工具及其关系
+
+《在 Debian 上安装和配置 Xen》一文把在Debian上安装Xen简化成一道命令：
+
+On Debian Lenny 5.0 :
+
+apt-get install xen-hypervisor-3.2-1-amd64 
+xen-linux-system-2.6.26-2-xen-amd64 xen-utils-3.2-1 
+xenstore-utils xenwatch xen-shell xen-tools
+
+On Debian Squeeze 6.0
+
+apt-get install xen-linux-system xen-hypervisor xen-utils xen-tools
+
+    xen-hypervisor主要只有一个文件:/boot/xen-3.2-1-amd64.gz，就是宿主内核；
+    xen-linux-system则是打了Xen补丁的Linux内核，这个内核脱离hypervisor是无法启动的，只适用于虚拟机；dom0对hypervisor来说也是虚拟机之一，domU也可以直接用这个内核启动。
+    xen-utils则是运行在Dom0上的程序，比如xend、xm，作用是跟hypervisor通讯，是主要由Python编写的一系列程序。
+    xen-tools是如xen-create-image的一系列工具，作为xm工具的前端，用以管理安装虚拟机；这是一套perl脚本，也有很灵活扩展性。
+    xen-shell是一个交互式的shell，常见用于VPS服务商提供给用户的操作界面，用户根据几个封装好的命令控制虚拟机如重启等工作。(Debian 6.0 下没有了。)
+    xenstore-utils、 xenwatch分别是虚拟机间数据共享和虚拟机监控的工具，不是必要组建，可不安装。
+
+===========================================================================
+二: Dom0的启动
+
+    grub2跟xen dom0目前关系不怎么所以如果你用grub2启动遇到挂掉xen启动不起来之类的，换回grub-legacy吧。
+
+    装完xen-hypervisor后可以打开/boot/grub/menu.lst看看，第一个选项应该是Xen 3.2-1-amd64之类的，看他的启动参数，是先加载Xen内核/xen-3.2-1-amd64.gz，再按模块挂在Linux内核；如果没有出现，需要运行update-grub。有这个后就可以放心重启了。
+
+    /boot/grub/menu.lst文件里面有这么一行配置：
+
+1## Xen hypervisor options to use with the default Xen boot option
+2# xenhopt=
+
+是预留来传hypervisor参数的，比如要限制dom0的内存使用，可以写成：
+
+1# xenhopt=dom0_mem=256M
+
+修改后记得运行 update-grub才生效。
+
+关于Dom0内存的占用可能导致虚拟机不稳定可参看：Dom0 mem allocation and domU network issues。
+
+===========================================================================
+三：虚拟机的网络
+
+无论是简单的桥接，安全的NAT子网，内部私有网，单双向网，利用内核的特性都可以做到： Xen Networking
+
+===========================================================================
+四：虚拟机的安装
+关于管理工具
+
+有两套工具可以用来创建Xen虚拟机：xen-tools, libvirt-bin，从它们各自的主页很清晰看到它们的定位不同，前者主要用于本地管理Xen，由Debian支持，后者用于管理各种虚拟方案（xen,openvz,kvm,qeum,vbox,vmware....），由Redhat支持。虽然都支持跟兼容，但实际上前者有利于安装前者的系统，后者有利于安装后者的系统。这里只研究前者。
+关于 xen-create-image
+
+xen-tools是相当简单实用的一套脚本，教程里面一般提到使用的xen-create-image。
+
+xen-tools有一个全局配置文件/etc/xen-tools/xen-tools.conf，里面写的参数会最终被xen-create-image的命令行参数覆盖或补充。
+关于 --install-method
+
+xen-tools的作用主要是控制怎么安装一个发行版，因为xen虚拟机的特殊方式，一般都不会启动该发行版的安装程序，而是用发行版的基础包管理来进行安装，安装参数--install-method负责这个过程，比如Debian/Ubuntu就要用debootstrap方法安装，CentOS/Fedora用rinse或rpmstrap，另外还有copy、tar方法。安装好一个模板系统后对那个镜像手动挂载，tar压缩后来用部署其他虚拟机，是个好方法。
+关于 --dist
+
+--dist让你指定一个发行版的名字，你会发现并不是所有发行版都能被支持的，实际支持的可以看看/usr/lib/xen-tools的内容，里面各个对应发行版的目录内都包含了一系列的脚本，如预先安装什么包，需要设置某个配置文件，比如说libc6-xen，不过在64位机环境下这个是不需要的，脚本会自动判断。
+关于安装新版本系统
+
+因为版本太旧，在Debian Lenny里面的xen-tools跟debootstrap不能直接支持比如Ubuntu Lucid(10.4)之类的较新的发行版的安装，倒是有比较曲折的方法Ubuntu upgrade to 9.10/10.04 for Xen DomU 。但其实有更好的方法：下载新版的Xen-tools跟debootstrap的deb回来装上。因为这些只是一些脚本，不会跟系统其他包有冲突。装完后就可以直接安装新版系统了。(dpkg安装新版xen-tool时候提示缺一个依赖，按名字装上即可)
+关于 --mirror
+
+安装教程里面一般都让你指定一个对应发行版的源，考虑到网速因素，这样安装一个虚拟机是很累的，虽然xen-create-image有个--cache可以在dom0上缓存deb包。其实如果你有相应发行版的iso文件，完全可以拿iso来做安装源：
+
+1 mkdir /mnt/isodir
+2 mount -o loop /path/to/the_iso_file.iso /mnt/isodir
+3 cd /mnt/isodir
+4 python -m SimpleHTTPServer
+
+现在这个机器就在8000端口上运行着一个HTTP源了，直接在mirror参数里面指定该地址即可，这样的安装过程很快。缺点是可能安装脚本有一些包在iso中没有提供而出错，建议加上--verbose参数查看整个安装过程。
+
+安装过程的日至会被放在/var/log/xen-tools/<NAME>.log，如果安装过程出现什么问题可以直接看这个对应的文件。使用本地ISO做源虽然一般没什么问题，但如果缺了什么包之类的会在日志中提示。
+关于 --role
+
+--role=udev这个参数建议创建新虚拟机时候加上。--role参数会让创建脚本在/etc/xen-tools/role.d/目录下寻找相应名字的脚本运行，udev就是其中一个，作用是给虚拟机装上udev包。udev是提供动态/dev目录的机制，是提供内核对硬件识别的事件桥梁，对一般的xen虚拟机来说影响不算太大，如果不安装最显然的是会找不到/dev/shm挂载点（启动过程有一个warnning），但一般来说还是推荐安装。
+
+/etc/xen-tools/role.d/里面默认包含了以下一些有用的脚本，使用时可以逗号分隔，如--role=udev,minimal,cfengine：
+
+    builder 自动安装build-essential等编译链包，部署distcc集群有用。
+    cfengine CFengine是一个服务器自动化控制服务，对部署大量服务器很有用。会拷贝dom0上的配置。
+    editor 自动根据dom0里面的sed脚本来配置domU内的配置文件，具体可以打开/etc/xen-tools/role.d/editor看看说明。
+    passwd 自动修改domU的密码。默认--passwd参数是会出现passwd的交互修改root密码的过程，用这个role脚本就可以实现自动应答。要使用--role-args=mYpassWd传入相应密码。
+    minimal 精简化domU系统。安装一些screen、vim等实用工具，卸除manpages等对虚拟机意义不大的包。
+    udev 如前述，安装udev包。
+    xdm 安装X、xdm、icewm等GUI包。
+    gdm 同上，登陆器换成gdm。
+
+另外这些脚本默认都是针对Debian系系统设计的，Redhat系的应该用不了。
+关于 --pygrub
+
+最后有个--pygrub参数，关系到domU的引导过程。xen的半虚拟并没有从引导区的虚拟过程，而是直接读取内核文件运行。默认情况下是直接用dom0的内核的，如果domU的发行版跟版本跟dom0一致，这样处理倒是很方便，但是一旦不一致就容易出现找不到root分区等各种引导问题。如果安装的domU的系统跟dom0不一致的（包括amd64/i386这样的架构不同），就加上--pygrub参数，这会让domU安装上它自己的内核，以及生成一个/boot/grub/menu.lst文件，引导虚拟机时会根据这个文件模拟grub出现一个引导菜单，提出其自己的内核文件来启动虚拟机。
+
+pygrub其实是xend的一个python工具，在/usr/lib/xen-3.2-1/bin/pygrub，可以直接这样运行来测试pygrub是否正常读取到内核：
+
+1 /usr/lib/xen-3.2-1/bin/pygrub /home/xen/domains/lenny3/disk.img
+
+会出现菜单，选择后会退出，返回一段临时文件数据，内核文件的临时位置。
+
+目前在Debian Squeeze内的Xen 4.0的pygrub有个小小的低级错误，运行后会报模块导入错误，其实只要编辑/usr/lib/xen-4.0/bin/pygrub文件，把里面修改path的一行提前即可：
+
+1 sys.path.insert(1, sys.path[0] + '/../lib/python') #这行原在30行左右，提前到这里
+2 import xen.lowlevel.xc  #原本这里出错
+
+典型的几种创建方法
+
+xen-create-image --hostname=my-lenny --dist=lenny --mirror=http://mirrors.163.com/debian --role=udev --force --verbose
+xen-create-image --hostname=my-ubuntu-vm --dist=lucid --mirror=http://mirrors.163.com/ubuntu --role=udev --pygrub --force --verbose
+xen-create-image --hostname=my-xen-vm --dist=squeeze --install-method=tar --install-source=/path/to/system_tared.tar.gz --pygrub --force --verbose
+
+===========================================================================
+第五章：虚拟机的运行
+关于虚拟机配置文件
+
+完成创建虚拟机后，默认情况下在/home/xen/domains/<NAME>下生成虚拟机的磁盘文件，在/etc/xen/<NAME>.cfg生成相应虚拟机的配置文件。关于虚拟机配置的修改，只需直接打开这个cfg文件修改即可(如内存大小，CPU多少，使用VNC等)。配置文件其实是一个Python脚本，也就是说可以对虚拟机的参数进行创建时的动态调节。
+
+配置文件的选项完整说明可以运行xm create --help_config查看。
+
+启动虚拟机以Xen的术语来说是创建一个实例：xm create -c /etc/xen/<NAME>.cfg，-c参数可以马上进入虚拟机的console，使用pygrub的虚拟机只能通过这个方法看到grub菜单。
+关于虚拟机启动过程
+
+本文成文时，使用Debian Lenny默认安装系统部署的domU似乎都有一个启动bug，即创建后使用xm console <NAME>仅能看到虚拟机启动的log信息，但是不出现shell，也无法登录，无法响应，只能按ctrl-]返回dom0。如果按上述安装了新版的Xen-tools跟debootstrap再创建的虚拟机就没有这个问题了。
+
+用了旧版工具但要修复这个问题也不算太麻烦：
+
+xm shutdown <NAME>
+#确保关闭，运行xm list确保虚拟机已经没有运行
+mount -o loop /home/xen/domains/<NAME>/disk.img /mnt
+cp /mnt/etc/inittab /mnt/etc/inittab.bak
+sed 's/tty1/hvc0/' /mnt/etc/inittab.bak > /mnt/etc/inittab
+umount /mnt
+
+就是替换/mnt/etc/inittab文件里面，把虚拟终端的交互设备从tty1改成hvc0。在新版的xen-tools里面，这个替换已经由安装脚本完成了。hvc0是Xen虚拟机的类终端设备，只有让虚拟终端的输出输入跟hvc0链接，才能通过xen的console方法登录虚拟机。
+
+如果使用vnc连接虚拟机，又会发现vnc里面无法登录虚拟机，vnc是framebuffer驱动的图形，默认连接tty1设备，可以按上述方法打开虚拟机的/mnt/etc/inittab文件，在getty那一段，写成这样：
+
+0:2345:respawn:/sbin/getty 38400 hvc0
+1:2345:respawn:/sbin/getty 38400 tty1
+
+如果你安装的是Ubuntu，Ubuntu默认没有使用inittab来配置终端，而是使用了新的机制，使用目录/etc/init/里面的文件来控制，可以发现里面有tty1.conf之类的文件，可以cp /etc/init/tty1.conf /etc/init/hvc0.conf，然后打开/etc/init/hvc0.conf，把tty1那一段改成hvc0，保存即可。
+关于使用VNC查看虚拟机
+
+关于VNC的设置在/etc/xen/xend-config.sxp和各个虚拟机的配置文件里面都有选项，关系是前者是全局配置。
+
+要打开一个虚拟机的VNC输出，只需在其配置文件内添加（望文生义即可）：
+
+vfb = [ 'type=vnc' ]
+#复杂点的：
+vfb = [ 'type=vnc,vncdisplay=10,vncpasswd=s3cr3t' ]
+
+vncdisplay的值加上5900，得到的就是最终vnc服务所监听的端口。
+
+更复杂的配置选项看xm create --help_config。
+关于虚拟机的自动启动
+
+让虚拟机跟随dom0启动的方法有很几种，比如在/etc/xen/auto/目录里面放虚拟机配置文件的链接。但似乎更好的做法是在每个配置文件里面写上：
+
+on_xend_start = 'start'
+on_xend_stop = 'suspend'
+
+这样的好处是当dom0关机，Xen会先让虚拟机进入挂起状态（当然也可以改成shutdown直接关机），下次重启后虚拟机直接恢复。
+
+===========================================================================
+第六章：其他问题
+关于虚拟机的磁盘方式
+
+使用xen-create-image工具创建的虚拟机，默认都是使用loop文件设备来映射，这样对io比较敏感的服务来说会有些影响。Xen3.3后引入了使用blktap驱动映射的磁盘设备，据称性能会有提高，不过根据试验好像跟pygrub配搭不怎么稳定（在xen-4.0下）。
+
+觉得最靠谱的方式是使用lvm，xen-create-image工具也是支持直接创建lvm逻辑卷来安装的，这样即没有性能问题，也没有稳定问题。
+全虚拟半虚拟与CPU支持VM指令集的关系
+
+扫了一圈Google到的Xen资料，很多都让你检查/proc/cpuinfo里面有没有支持VM标记。其实CPU是否支持VM指令集，对xen来说只是能不能跑windows的问题，对于Xen的特色——半虚拟来说没什么影响，而且这才是xen最有价值的地方。
