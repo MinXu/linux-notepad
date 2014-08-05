@@ -195,4 +195,3 @@ on_xend_stop = 'suspend'
 扫了一圈Google到的Xen资料，很多都让你检查/proc/cpuinfo里面有没有支持VM标记。其实CPU是否支持VM指令集，对xen来说只是能不能跑windows的问题，对于Xen的特色——半虚拟来说没什么影响，而且这才是xen最有价值的地方。
 
 
-sudo xen-create-image --hostname=gutsy32.dev.stripe.com --lvm=percvg0 --size=20Gb --swap=1gb --ip=172.16.104.244 --netmask=255.255.255.0 --gateway=172.16.104.1 --force --memory=512Mb --arch=amd64 --kernel=/boot/vmlinuz-2.6.22-14-xen --initrd=/boot/initrd.img-2.6.22-14-xen --debootstrap --dist=dapper --mirror=http://mirror.internode.on.net/pub/ubuntu/ubuntu/ --passwd
