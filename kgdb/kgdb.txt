@@ -1,0 +1,66 @@
+													kgdb 双机调试
+搞了昨天上午和今天上午，终于搞好了，现在简单写一个调试步骤，因为过程复杂，不能完全覆盖，还请包涵。有任务问题我们一起解决!!!!!!!
+
+============================分割符============================================================
+Kgdb使用双击调试，一台是Develop 一台是Target.
+Develop: Ubuntu 12.04 (V2X Server) Username:min   Password:min
+Target:  XUbuntu 13.04 （on the vmware）
+
+通讯：  两台机器使用console通讯
+  Target；设置
+     Virtual Machine Settings->Serial Port 2->Use socket(named pipe)->/tmp/serial
+     From: Server    To: An Application
+  Develop: 设置
+     socat -d -d /tmp/serial PTY&   (会显示管道连接的设备eg: /dev/pty/1 ，可能不是1 后面有用，别忘记后台运行哦)
+测试
+  Target 输入：
+     sudo cat /dev/ttyS1
+  Develop 输入：
+     echo "aaa" > /dev/pty/1
+  上面这个1是socat看到的,查看target上面有没有输出，aaa，没有就call me!!!!
+  
+
+1.Develop 准备工作：
+  1. /home/min/tcp_source/linux-source-3.8.9目录下存放 linux kernel 源码， 编译好的未压缩的linux内核文件vmlinux。
+  2. /home/min/tcp_source/nc 目录下存放 nc 源码， 并且编译生成nc.ko
+  
+2.Target 准备工作:
+  1.挂在Develop目录到Target  (有时候需要sudo umount /home/xumin/www) 
+      sshfs min@192.168.1.148:/home/min/tcp_source  /home/xumin/www
+  2.拷贝nc.ko 到target
+      cp /home/xumin/www/nc.ko /home/xumin/tcp_source/nc/
+  3.安装nc 模块
+      sudo insmod /home/xumin/tcp_source/nc/nc.ko
+  4.产看nc.ko的安装地址, root用户才能看到
+      su
+      cat /sys/module/nc/sections/.text
+            0xffffffffa02cd000  （记住这个地址）
+  5.开始KGDB调试，等待Develop连接,也是root用户下面
+      su
+      sh /home/xumin/tcp_source/test/
+      sh startgdb.sh             (这个时候,target会冻结操作，等待Develop连接控制)
+      
+      
+      
+ 3.Develop 开始调试
+    cd /home/min/tcp_source/linux-source-3.8.9
+    gdb vmlinux
+    (gdb)set remotebaud 115200
+    (gdb)target remote /dev/pts/1   (这样以后会连接到target, 并且停止在kernel/debug/debug_core.c:1013)
+    (gdb)add-symbol-file /home/min/tcp_source/nc/nc.ko   0xffffffffa02cd000 (会有提示输入y/n,输入y)
+    下面就可以开始调试了，下面举例设置断点调试DoCoding函数
+    (gdb)hb DoCoding
+    启动target, continue
+    (gdb)c
+    
+4.Target 这个时候可以继续运行，但是当代码走到DoCoding处会停下来，然后就可以调试了
+    /home/xumin/tcp_source/test/go.sh   （运行之前把rmmod nc.ko , insmod nc.ko 都注释掉，不然重新加载nc.ko，可能位置就不一样了eg: 0xffffffffa02cd000）
+    运行到DoCoding处 Target 继续冻结，Develop可以运行
+    
+5.Develop 开始调试
+   [New Thread 3009]
+   [Switching to Thread 3009]
+       Breakpoint 1, DoCoding (
+   (gdb)n 
+   或者
+   (gdb)s
