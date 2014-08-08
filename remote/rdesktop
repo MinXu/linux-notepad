@@ -1,0 +1,2 @@
+sudo apt-get install xrdp
+rdesktop  ip:3389   -g 800x640 -f
