@@ -8,6 +8,7 @@ if [ $1 = create ];then
 
 elif [ $1 = install ];then
 	sudo qemu-system-x86_64 -m 2048 -drive file=/home/xumin/qemu/target.img,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -cdrom /home/xumin/ubuntu-14.04-server-amd64.iso.1 -smp 4 -soundhw es1370
+#	sudo qemu-system-x86_64 -m 2048 -drive file=/home/xumin/qemu/target.img,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -cdrom /home/xumin/ubuntu-14.04-server-amd64.iso.1 -smp 4 -soundhw es1370 -daemonize -vnc :1
 elif [ $1 = run ];then
 	sudo qemu-system-x86_64 -m 2048 -drive file=/home/xumin/qemu/target.img,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370
 elif [ $1 = image ];then
