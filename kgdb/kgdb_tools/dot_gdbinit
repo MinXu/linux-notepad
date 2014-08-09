@@ -1,0 +1,6 @@
+define rmt
+set solib-search-path /home/xumin/tcp_source/nc
+set solib-absolute-prefix /home/xumin/tcp_source/nc
+set remotebaud 115200
+target remote /dev/pts/4
+end

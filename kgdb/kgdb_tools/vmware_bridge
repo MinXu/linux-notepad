@@ -1,0 +1,10 @@
+vmplayer bridge:
+bridge mode:
+	bridge with eth0 on the host
+	vmnet0(host) ---> eth0(vhost)
+host-only mode:
+	172.16.35.1  --->dhcpc
+	vmnet1(host) ---> eth0(vhost)
+nat mode:
+	192.168.80.1 --->dhcpc
+	vmnet8(host) ---> eth0(vhost)
