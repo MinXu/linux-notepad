@@ -1,0 +1,330 @@
+				新手安装Xentoo(Xen + Gentoo)的极速体验
+===========================================================================================================================
+http://www.linuxsir.org/bbs/thread225421.html
+===========================================================================================================================
+Xen的出现是虚拟化技术的一大突破，操作系统在Xen虚拟机中运行速度和直接在硬件上运行速度几乎相当，这在以前是不可能的，下面我们一起来进入这个极速的虚拟世界
+安装Xentoo不用深入学习Xen虚拟机，只须了解一下它的运行机制和几个基本术语就足够了：
+
+Xen：
+Xen 是在剑桥大学作为一个研究项目被开发出来的，目前在GPL许可下开源。Xen 被定义为一款 半虚拟化（paravirtualizing） VMM（虚拟机监视器，Virtual Machine Monitor），这表示，为了调用系统管理程序，要有选择地修改操作系统，然而却不需要修改操作系统上运行的应用程序。虽然 VMWare 等其他虚拟化系统实现了完全的虚拟化（它们不必修改使用中的操作系统），但它们仍需要进行实时的机器代码翻译，这会影响性能。现在的Xen要为内核打补丁，但是，将来的处理器能支持虚拟化，内核也就不需要打补丁了。比如说，Intel的VT和AMD的Pacifica处理器都将包括这种支持。XenSource公司2005年8月在Intel开发者论坛（IDF）上发表声明说，它已经利用Intel的VT-Enabled平台和Xen技术虚拟化了Linux和Windows XP SP 2。
+
+dom0,domU：
+在Xen中，一个“系统管理程序”（Xen自身被称为“系统管理程序”，是因为它比客户OS的系统管理代码运行所需的特权级还高。）运行在0环，客户OS运行在1环，应用程序运行在3环。当系统引导的时候，Xen被装载到0环的内存中。它在1环上启动修补过的内核，这被称作是domain 0（domain是指一个运行中的虚拟机，在其上有一个guest OS在执行）。从这个domain开始，你可以创建和管理更多的domain，这些domains统称为domain U。目前，修补过的Linux内核2.4和2.6可以作为domain 0，而物理设备驱动程序只能运行在特权级，也就是domain 0上。
+
+Gentoo：
+Gentoo Linux 是一个基于源码包的 Linux 系统。和已有的商业发行版相比，Gentoo 非常独特。
+如今的商业 linux 发行版提供了一个几乎完全自动化的安装过程。在自动的硬件检测之后，你只要回答几个问题，划分硬盘就可以了。一会功夫，所有的东西就都安装好了，你只要登陆就行了。
+Gentoo 的安装过程是基于命令行的，几乎没有东西是自动完成的。大部分的设置都是通过使用编辑器手工设置配置文件完成的，安装过程会消耗大量的时间。
+Gentoo 的安装过程可以看做是一次 Linux 的课程。你可以从中学到很多有关系统的知识。大量的步骤都是手工完成的，消耗了很多时间，但从此以后，你可以更好地理解你的 Linux 系统地工作了。
+Gentoo 还使用特定地编译器选项编译程序，这些选项可以生成为你的 CPU 定制的优化代码。
+除此之外，你还可以加入或去掉某些编译特征。最终的结果就是一个符合你的需要的优化的、个性化的系统。
+
+Xentoo：
+一个新创的词，由Xen+Gentoo合成而来，意思是运行于Xen之上的Gentoo，在本文中，代表的是一个解决方案
+
+那么，为什么要有Xentoo？
+由于Gentoo有着上述的诸多优点，深受Linux爱好者喜欢，不过初学者安装时很容易因为误操作导致硬盘的数据全军覆没，而且还必须边看手册边安装，因此不少人用VMWare安装Gentoo，但是VMWare本身效率不高，导致安装和运行Gentoo时会浪费大量的时间。有一天，Linuxfans们终于忍不住了，说要有Xentoo，于是就有了Xentoo……
+
+
+完美安装Xentoo，主要分3个阶段：
+
+
+第一阶段:安装Xen和dom0新内核,测试Xen
+
+1.1、这个安装经验主要参考Xen Users' manual,在安装Xen前必须认真阅读该文档
+
+1.2、准备所需软件:Xen二进制安装包:xen-2.0.7-install-x86_32.tgz和Xen源代码包:xen-2.0.7-src.tgz,以及Xen User's manual文档中+号软件(安装运行Xen所需),*号的软件(编译Xen所需)(二进制包里面包含Xen的执行文件和修改过的Linux2.4/2.6内核,但这些内核只是基本配置,几乎所有(网卡,声卡,等硬件)驱动都没有编译进去.如果想真正体验Xen,为了使硬件得到正确驱动,应使用源码进行编译安装)
+以下是Xen User's manual中提到的所需软件:
++ The iproute2 package.
++ The Linux bridge-utils (http://bridge.sourceforge.net)
++ The Linux hotplug system (http://linux-hotplug.sourceforge.net/)
+* Twisted v1.3 或以上 (编译xen时通过make install-twisted得到)
+* Build tools (gcc v3.2.x or v3.3.x, binutils, GNU make)
+* libcurl 开发库(libcurl-devel)
+* zlib 开发库 (zlib-dev)
+* Python 开发库 v2.2 或以上 ( python-dev)
+* LATEX(用于生成文档)
+
+**从二进制包安装的,解压后执行install.sh安装(它会检测所需软件是否齐全,否则不会安装),完成后,跳到1.9
+
+**以下步骤主要介绍从src安装(2.4与2.6的安装方式稍有不同,下面的介绍会同时针对这两种版本的内核)
+
+1.3、解压
+#cd /tmp
+#wget http://www.cl.cam.ac.uk/Research/SRG/netos/xen/downloads/xen-2.0.7-src.tgz
+#tar -zxvf xen-2.0.7-src.tar.gz
+#cd xen-2.0
+
+1.4、阅读xen的makefile(很简单,就几十行,主要为了解make做了哪些工作,为下一步修改作准备,如果内核是2.6,这一步可跳过)
+
+1.5、修改Makefile,(根据需要修改,内核为2.6的可以跳过这一步.Xen-2.0.7目前只支持linux-2.4.30,linux-2.6.11,netbsd-2.0,freebsd-5.3)
+以下是针对我的redhat9,2.4内核的修改
+KERNELS ?= linux-2.6-xen0 linux-2.6-xenU
+改为
+KERNELS ?= linux-2.4-xen0
+
+xen0为host os - domain 0的核心,而xenU作为guest os - domain U的核心,可以不需要任何硬件驱动程序.
+这里暂时不编译xenU,主要是为了节省一些时间,在后面安装Gentoo的时候直接采用Xen二进制安装包中预编译好的内核.因为我的机器比较慢,编译一次内核要2、3个小时,各位可以根据自己的实际需要决定是否编译xenU
+
+1.6、复制Linux内核源码(bz2格式)到xen-2.0目录内(网速快的可以跳过这一步,Xen会从自动网上下载相应的内核)
+
+1.7、使用自己的.config文件编译内核:(下面主要是以我的2.4.30内核为例,对于2.6内核原理相同,可以根据自己实际情况进行修改)
+
+1)、Xen内核补丁程序的bug,不修改这个,编译内核会出错:(对于2.6内核没有这个bug,可以跳过这一步)
+
+修改 linux-2.4.30-xen-sparse/mkbuildtree
+找到cd ${AD}/include/asm-xen 在下面加入:
+ln -sf ../asm-i386/acpi.h
+ln -sf ../asm-i386/cobalt.h
+ln -sf ../asm-i386/e820.h
+ln -sf ../asm-i386/edd.h
+ln -sf ../asm-i386/hc_sl811-hw.h
+ln -sf ../asm-i386/lithium.h
+ln -sf ../asm-i386/pci-direct.h
+ln -sf ../asm-i386/save_state.h
+ln -sf ../asm-i386/sl811-hw.h
+ln -sf ../asm-i386/smpboot.h
+
+2)、让Xen自动对内核打补丁,并在补丁完毕中止程序(一定要中止程序,否则Xen会使用它默认的defconfig,这个配置是没有任何硬件驱动的)
+#make kernels
+
+输入完命令后,Xen会自动下载内核源码并打补丁,打完补丁,准备make内核的时候(这时屏幕显示一大堆config信息),按Ctrl+c中止程序.
+
+
+3)、复制现有内核的配置文件到 linux-2.4.30-xen0
+#cp /boot/config-2.4.30 linux-2.4.30-xen0/.config
+#cd linux-2.4.30-xen0
+#make ARCH=xen oldconfig
+
+期间会提示新增的有关Xen的选项,全部都选y
+
+4)、编译内核
+#make ARCH=xen dep
+#make ARCH=xen modules
+#make ARCH=xen modules_install
+#make ARCH=xen install
+
+5)、安装与内核版本对应的modutils(参考 linux-2.4.30-xen0/Documentation/Changes)
+
+6)、TLS Libraries (这是Xen Users' manual 2.4.3小节中的原文,根据自己实际情况处理)
+Users of the XenLinux 2.6 kernel should disable Thread Local Storage (e.g. by doing a mv /lib/tls /lib/tls.disabled) before attempting to run with a XenLinux kernel2.4. You can always reenable it by restoring the directory to its original location (i.e. mv /lib/tls.disabled /lib/tls).
+The reason for this is that the current TLS implementation uses segmentation in a way that is not permissible under Xen. If TLS is not disabled, an emulation mode is used within Xen which reduces performance substantially.
+We hope that this issue can be resolved by working with Linux distribution vendors to implement a minor backward-compatible change to the TLS library.
+大意是使用2.6内核的用户需要禁止TLS（执行这个命令 #mv /lib/tls /lib/tls.disabled）,否则性能会下降
+
+
+**对于2.6的内核,可以根据上述各项原则相应修改后自行配置编译
+
+1.8、所有修改就绪,编译安装Xen
+Xen还需要用到3个软件(Twisted Matrix Framework,Python Logging package,iptables),如果机器上没有的可以用以下命令安装:
+#cd /tmp/xen-2.0
+#make install-twisted;
+#make install-logging;
+#make install-iptables;
+接下来开始编译安装(我没有latex,所以不编译doc)
+#make install-xen;
+#make install-tools;
+
+**注意,这里不要再执行make kernels或make install-kernels,因为在第7步我们已经手动配置并编译安装了被xen修改的新内核
+
+1.9、修改启动配置 /boot/grub/grub.conf (以下是针对2.4内核和我的128M内存的机器的,Xen大概占了12M左右,若是2.6内核和更大的内存则进行相应修改,强烈推荐使用256或更多的内存)
+添加:
+title Xen 2.0 / XenLinux 2.4
+kernel /boot/xen-2.0.gz dom0_mem=53248
+module /boot/vmlinuz-2.4-xen0 root=/dev/hda2 ro console=tty0
+
+1.10、测试Xen,配置ttylinux
+
+1)、下载并解压ttylinux (http://sf.net/projects/xen/)
+#cd /tmp
+#wget http://jaist.dl.sourceforge.net/sourceforge/xen/ttylinux-xen.bz2
+#bzip2 -d ttylinux-xen.bz2
+
+
+2)、创建配置文件: /etc/xen/auto/ttylinux
+内容:
+kernel = "/boot/vmlinuz-2.6-xenU"
+memory = 64
+name = "ttylinux"
+nics = 1
+ip = "1.2.3.4"
+disk = ['file:/tmp/ttylinux-xen,sda1,w']
+root = "/dev/sda1 ro"
+
+**如果/boot里面没有vmlinuz-2.6-xenU或vmlinuz-2.4-xenU,可以从Xen的二进制安装包/boot目录中得到
+
+3)、重新启动,进入XenLinux,执行命令,创建domain(就是启动一个虚拟的ttylinux)
+#xend start
+#xm create /etc/xen/auto/ttylinux -c
+
+查看xm的详细用法:
+#xm help
+
+如果ttylinux顺利启动进入login界面,且能ping得到,证明第一阶段的安装基本成功了.
+
+
+第二阶段:安装domU - Xentoo
+
+这里是探讨如何把Gentoo作为domU安装到文件而不是真实分区的方法,不同于HOWTO_Xen_and_Gentoo
+主要参考 <Gentoo Linux 硬盘安装参考指南>,<Gentoo Linux x86 手册>,<Xen Users' manual> - "A. Installing Xen / XenLinux on Debian"
+
+2.1、
+首先制作硬盘映像文件(root:4G,boot:32M,swap:256M),若直接安装到硬盘分区,可跳过这一步
+
+#dd if=/dev/zero of=xentoo-root.image bs=1024k count=4000
+#dd if=/dev/zero of=xentoo-swap.image bs=1024k count=256
+
+2.2、格式化文件系统(若直接安装到硬盘分区,则把image文件名改为相应的设备名)
+
+#mkfs.ext3 xentoo-root.image
+#mkswap xentoo-swap.image
+
+2.3、挂装分区到新建的目录(若直接安装到硬盘分区,则把image文件名改为相应的设备名,并且mount命令不许要loop参数)
+
+#mkdir /mnt/gentoo
+#mount -o loop xentoo-root.image /mnt/gentoo
+
+2.4、下载并解压stage3(http://mirror.gentoo.gr.jp/releases/x86/2005.1/stages/)放到gentoo的根也就是/mnt/gentoo （根据自己的CPU下载相应的包）
+#cd /mnt/gentoo
+#wget http://mirror.gentoo.gr.jp/releases/x86/2005.1/stages/i686/stage3-i686-2005.1.tar.bz2
+#tar -xvjpf stage3-i686-2005.1.tar.bz2
+
+2.5、设置系统环境
+#chroot /mnt/gentoo /bin/bash
+
+添加DNS:
+echo "nameserver 202.96.128.86" >> /etc/resolv.conf
+echo "domain xenlinux" >> /etc/resolv.conf
+
+修改root密码
+#passwd root
+
+修改/etc/fstab
+
+/dev/sda1 / ext3 errors=remount-ro 0 1
+/dev/sda2 none swap sw 0 0
+proc /proc proc defaults 0 0
+shm /dev/shm tmpfs nodev,nosuid,noexec 0 0
+
+退出
+#exit
+#umount /mnt/gentoo
+
+2.6、创建xen配置文件/etc/xen/auto/xentoo (推荐使用256或更多的内存)
+
+kernel = "/boot/vmlinuz-2.6-xenU"
+memory = 64
+name = "xentoo"
+nics = 1
+ip = "192.168.0.3"
+gateway = "192.168.0.1"
+disk = ['file:/mnt/xentoo/xentoo-root-image,sda1,w','file:/mnt/xentoo/xentoo-swap-image,sda2,w']
+root = "/dev/sda1 ro"
+
+**若直接安装到硬盘分区,则disk那一行改为：
+disk = ['phy:hdaX,sda1,w','phy:hdaY,sda2,w']
+
+hdaX,hdaY对应你分给Xentoo的root分区和swap分区
+
+2.7、启动Xentoo
+#xend start
+#xm create /etc/xen/auto/xentoo -c
+
+如无意外即可进入Xentoo登录界面
+
+上述所有操作相当于Gentoo的安装进行了以下步骤
+# chroot /mnt/gentoo /bin/bash
+# env-update
+# source /etc/profile
+
+2.8、在Xentoo中安装必备软件
+#emerge --sync (这里我用了1h)
+#emerge fvwm (fvwm最小最快,3h)
+
+fvwm最快的配置方法:
+#cp /usr/share/fvwm/system.fvwm2rc-sample-95 ~/.fvwm/.fvwm2rc
+
+安装与配置Gentoo不属于本文讨论范围,请根据Gentoo的手册和自己的需要进行后续安装
+安装完后清理垃圾文件(rm -rf /usr/portage/distfiles/*;rm -rf /var/tmp/*)
+
+2.9、配置Xwindow
+Xentoo下不能用startx,所以不要着急配置XF86Config,有几种方法进入X:
+
+* forward X11 apps through ssh (connect to the domain with ssh -X, run an
+xterm - it should just appear).
+* Run "vncserver" in the guest, connect to it from dom0 (or any other system).
+By playing with your gdm / kdm / xdm config, you can cause the vncserver to
+be started automatically and display the login screen.
+* Run Xnest in dom0, tell apps to connect to that instead of a local Xserver.
+* Run FreeNX server in the domU, connect to it using the free (as in beer)
+client from NoMachine. NX performs well and can do nifty things like
+forwarding sound, printing and local filesystems (if you can figure out how
+to set it up!)
+
+在这里,以VNC为例,参考HOWTO Xvnc terminal server进行配置,借助VNC就能很轻松进入图形界面 :-)
+
+按照文档配置完,如果直接执行/etc/init.d/xdm restart,还是会出错,/var/log/xdm.log:
+xf86OpenConsole: Cannot open /dev/tty0 (No such file or directory)
+为什么呢?噢,原来我没有装kdm和gdm,所以只能用xdm了:
+
+修改/etc/X11/xdm/Xservers:
+:0 local /usr/bin/X
+改为
+:0 local /usr/bin/Xvnc -geometry 800x600 -depth 16
+
+修改~/.xsession:
+添加
+#!/bin/bash
+exec /usr/bin/fvwm
+
+重新启动xdm:
+#/etc/init.d/xinetd restart
+#/etc/init.d/xdm restart
+
+回到domain0,运行vncviewer,连接到domU即可
+
+2.10、在Xentoo中编译新内核要注意的事项
+
+编译过程请参考 HOWTO Xen and Gentoo
+
+编译完成后,poweroff,回到在dom0中,把新内核复制出来,替换旧内核
+#mount -o loop xentoo-root.image /mnt/gentoo
+#cp /mnt/gentoo/usr/src/linux-2.6.x.y-xen/vmlinuz /boot/vmlinuz-2.6.x.y-xenU
+#umount /mnt/gentoo
+
+修改/etc/xen/auto/xentoo:
+kernel = "/boot/vmlinuz-2.6.x.y-xenU"
+
+再次启动Xentoo即可
+#xm create /etc/xen/auto/xentoo -c
+
+安装到这里基本上大功告成,可以开始享受极速虚拟的Xentoo了……
+需要说明一下,标题所说的极速在安装Gentoo的时候是体验不到的,由于Gentoo是基于源码的发行版,所以安装Gentoo是个培养耐心的的过程.我用emerge -p gnome看了一下,需要安装差不多200个包,超过500M的源代码,天哪,如果用我的PII400/128M/6.4G编译的话,可能要花5、6天时间,所以我才安装最小的fvwm.论运行速度Gentoo倒是比其他发行版快不少,花点时间安装还是值得的.欢迎交流宝贵意见,作者的伊妹儿:lostfalcon＠tom.com,转载请注明出处.
+
+
+第三阶段 使Gentoo可以单独启动(脱离Xen)
+
+编译新内核(emerge gentoo-source),根据自己实际情况进行配置和编译
+
+对于直接安装到硬盘分区,修改grub即可
+
+对于安装到image文件,请搜索相关文档
+
+
+附录:
+1、全面介绍Xen虚拟机 (http://tech.ccidnet.com/art/289/20050905/325111_1.html)
+2、Xen Users' Manual (http://www.cl.cam.ac.uk/Research/SRG/netos/xen/readmes/user/)
+3、Gentoo linux 简介 (http://www.huihoo.com/gentoo/)
+4、Gentoo Linux x86 手册 (http://www.gentoo.org/doc/zh_tw/handbook/handbook-x86.xml?full=1)
+5、HOWTO Xen and Gentoo (http://gentoo-wiki.com/HOWTO_Xen_and_Gentoo)
+6、Gentoo Linux 硬盘安装参考指南 (http://www.linuxfans.org/nuke/modules.php?name=Forums&file=viewtopic&t=5921)
+7、How to run Xwindows in the guest OS (http://lists.xensource.com/archives/html/xen-users/2005-09/msg00630.html)
+8、HOWTO Xvnc terminal server (http://gentoo-wiki.com/HOWTO_Xvnc_terminal_server)
+
+图片分别是用VNC登录Xentoo,进入fvwm和用Opera浏览网页的截图
+Xentoo-login.gif
+上传的缩略图大小:134.31KB [Xentoo-login.gif]
+Xentoo-aterm.jpg
+上传的缩略图大小:185.54KB [Xentoo-aterm.jpg]
+Xentoo-opera.jpg
+上传的缩略图大小:199.08KB [Xentoo-opera.jpg] 
