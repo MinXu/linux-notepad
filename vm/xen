@@ -151,7 +151,11 @@ sudo xl vncviewer domu
 #install:
 	sudo xen-create-image --hostname=workstation --dist=trusty --dir=/home/min/xenvm --mirror=http://http://mirrors.163.com/ubuntu --role=udev --verbose --pygrub --dhcp --passwd --force
 
- sudo xen-create-image --hostname=workstation --size=10Gb --swap=1gb --ip=10.80.104.123 --netmask=255.255.255.0 --gateway=10.80.104.1 --memory=512Mb --arch=amd64 --kernel=/boot/vmlinuz-3.13.11.4 --initrd=/boot/initrd.img-3.13.11.4 --dist=trusty  --dir=/home/min/xenvm --mirror=http://mirrors.163.com/ubuntu  --role=udev,gdm --verbose --pygrub  --passwd --force
+#ubuntu
+sudo xen-create-image --hostname=workstation --size=10Gb --swap=1gb --ip=10.80.104.123 --netmask=255.255.255.0 --gateway=10.80.104.1 --memory=512Mb --arch=amd64 --kernel=/boot/vmlinuz-3.13.11.4 --initrd=/boot/initrd.img-3.13.11.4 --dist=trusty  --dir=/home/min/xenvm --mirror=http://mirrors.163.com/ubuntu  --role=udev,gdm --verbose --pygrub  --passwd --force
+
+#centos
+sudo xen-create-image --hostname=workstation --size=10Gb --swap=1gb --ip=10.80.104.123 --netmask=255.255.255.0 --gateway=10.80.104.1 --memory=512Mb --arch=amd64  --dist=centos-6 --install-method=rinse  --dir=/home/min/xenvm --mirror=http://mirrors.163.com/centos/7.0.1406/os/x86_64/   --verbose --pygrub  --passwd --force
 
 #creat configure:
 	sudo xl create /etc/xen/workstation.cfg
