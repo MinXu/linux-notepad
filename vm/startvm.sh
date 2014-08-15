@@ -2,15 +2,16 @@
 
 KERNEL_PATH=/home/min/linux_source/linux-3.13.0/arch/x86/boot/bzImage
 ROOTFS_PATH=/home/min/qemu/rootfs.img_d
+TARGET_PATH=/home/min/qemu/target.img
+ISO_PATH=/home/min/ubuntu-14.04-server-amd64.iso.1
 #KERNEL_PATH=/boot/vmlinuz-3.13.11.4
 if [ $1 = create ];then
 	qemu-img create -f qcow2 target.img 30G
 
 elif [ $1 = install ];then
-	sudo qemu-system-x86_64 -m 2048 -drive file=/home/xumin/qemu/target.img,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -cdrom /home/xumin/ubuntu-14.04-server-amd64.iso.1 -smp 4 -soundhw es1370
-#	sudo qemu-system-x86_64 -m 2048 -drive file=/home/xumin/qemu/target.img,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -cdrom /home/xumin/ubuntu-14.04-server-amd64.iso.1 -smp 4 -soundhw es1370 -daemonize -vnc :1
+	sudo qemu-system-x86_64 -m 2048 -drive file=$TARGET_PATH,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -cdrom $ISO_PATH -smp 4 -soundhw es1370
 elif [ $1 = run ];then
-	sudo qemu-system-x86_64 -m 2048 -drive file=/home/xumin/qemu/target.img,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370
+	sudo qemu-system-x86_64 -m 2048 -drive file=$TARGET_PATH,if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 4 -soundhw es1370
 elif [ $1 = image ];then
 #	sudo qemu-system-x86_64 -net nic -net user,tftp="$(pwd)" -m 512 -kernel $KERNEL_PATH -initrd $ROOTFS_PATH  -append root="/dev/ram0 rw"
 #	sudo qemu-system-x86_64 -m 512 -kernel $KERNEL_PATH -initrd $ROOTFS_PATH -append "console=ttyS0 root=/dev/ram0 rw",if=virtio,cache=none -enable-kvm -localtime -net nic,vlan=0,model=virtio,macaddr=52-54-00-12-34-01 -net tap,vlan=0,ifname=tap0,script=no -boot c -smp 1 -soundhw es1370 -k en-us -s -serial stdio
@@ -64,7 +65,7 @@ elif [ $1 = image ];then
 	  #mount -t cifs -o username=min,password=min //10.0.2.2/min local_dir
       #5) qemu-system-arm -vnc :1 -daemonize -usbdevice tablet 
 	  #vncview localhost:1
-elif [ $1=xp ];then
+elif [ $1 = xp ];then
 	sudo qemu-system-x86_64 -m 512 -hda /home/min/xp/xp.img  -enable-kvm -localtime  -boot d -redir tcp:53389::3389 -smp 2 -soundhw all -daemonize
      #rdesktop localhost:3389
 #	sudo qemu-system-x86_64 -m 512 -hda /home/min/xp/xp.img  -enable-kvm -localtime  -boot d -redir tcp:53389::3389 -smp 2 -soundhw all -daemonize -vnc :1
