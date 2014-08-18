@@ -75,7 +75,7 @@ elif [ $1 = xp ];then
 elif [ $1 = xen_i ];then
 	#1) install:
 	#python -m SimpleHTTPServer 9999
-        sudo xen-create-image --hostname=$HOSTNAME --dist=trusty --dir=$XEN_DIR --mirror=http://http://mirrors.163.com/ubuntu --role=udev --verbose --pygrub --dhcp --passwd --force
+        sudo xen-create-image --hostname=$HOSTNAME --dist=trusty --dir=$XEN_DIR --mirror=http://mirrors.163.com/ubuntu --role=udev --verbose --pygrub --dhcp --passwd --force
 	#2) ubuntu
 	#sudo xen-create-image --hostname=$HOSTNAME --size=10Gb --swap=1gb --ip=10.80.104.123 --netmask=255.255.255.0 --gateway=10.80.104.1 --memory=512Mb --arch=amd64 --kernel=/boot/vmlinuz-3.13.11.4 --initrd=/boot/initrd.img-3.13.11.4 --dist=trusty  --dir=$XEN_DIR --mirror=http://mirrors.163.com/ubuntu  --role=udev,gdm --verbose --pygrub  --passwd --force
 	#3) centos
