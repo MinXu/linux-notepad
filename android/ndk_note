@@ -1,0 +1,354 @@
+https://developer.android.com/tools/sdk/ndk/index.html#Installing
+
+Android NDK
+===========================================================================================================
+ 	The NDK is a toolset that allows you to implement parts of your app using native-code languages such as C and C++. For certain types of apps, this can be helpful so you can reuse existing code libraries written in these languages, but most apps do not need the Android NDK.
+
+	Before downloading the NDK, you should understand that the NDK will not benefit most apps. As a developer, you need to balance its benefits against its drawbacks. Notably, using native code on Android generally does not result in a noticable performance improvement, but it always increases your app complexity. In general, you should only use the NDK if it is essential to your app—never because you simply prefer to program in C/C++.
+
+	Typical good candidates for the NDK are CPU-intensive workloads such as game engines, signal processing, physics simulation, and so on. When examining whether or not you should develop in native code, think about your requirements and see if the Android framework APIs provide the functionality that you need.
+
+
+Revisions
+==========================================================================================================
+The following sections provide information about releases of the NDK.
+
+Android NDK, Revision 10b (September 2014)
+
+Important notes:
+
+        Because of the 512MB size restriction on downloadable packages, the following 32-bit items are not in the 32-bit NDK download packages. Instead, they reside in the 64-bit ones:
+            Android-L headers
+            GCC 4.9
+        Currently, the only Renderscript support provided by the NDK is for 32-bit Renderscript with Android 4.4 (API level 19). You cannot build HelloComputeNDK (the only Renderscript sample) with any other combination of Renderscript (32- or 64-bit) and Android version.
+        To compile native-codec, you must use a 64-bit NDK package, which is where all the Android-L headers are located.
+
+Important bug fixes:
+
+        Fixed gdb 7.6 in GCC 4.8/4.9. (Issues 74112 and 74371.)
+        Fixed GCC 4.8/4.9 for x86, so that they no longer enable -msse4.2 and -mpopcnt by default. (Issue 73843.)
+
+Other bug fixes:
+
+        Removed stdio.h from the include-fixed/ directories of all versions of GCC. (Issue 73728.)
+        Removed duplicate header files from the Windows packages in the platforms/android-L/arch-*/usr/include/linux/netfilter*/ directories. (Issue 73704.)
+        Fixed a problem that prevented Clang from building HelloComputeNDK.
+        Fixed atexit. (Issue 66595.)
+        Made various fixes to the docs in docs/ and sources/third_party/googletest/README.NDK. (Issue 74069.)
+        Made the following fixes to the Android-L headers:
+            Added the following functions to ctype.h and wchar.h: dn_expand(), grantpt(), inet_nsap_addr(), inet_nsap_ntoa(), insque(), nsdispatch(), posix_openpt(), __pthread_cleanup_pop(), __pthread_cleanup_push(), remque(), setfsgid(), setfsuid(), splice(), tee(), twalk() (Issue 73719), and 42 *_l() functions.
+            Renamed cmsg_nxthdr to __cmsg_nxthdr.
+            Removed __libc_malloc_dispatch.
+            Changed the ptrace() prototype to long ptrace(int, ...);.
+            Removed sha1.h.
+            Extended android_dlextinfo in android/dlext.h.
+            Annotated __NDK_FPABI__ for functions receiving or returning float- or double-type values in stdlib.h, time.h, wchar.h, and complex.h.
+
+Other changes:
+
+        Updated mipsel-linux-android-4.9 and mips64el-linux-android-4.9, implementing a new multilib directory layout, and providing support for gdb-7.7
+        Enhanced cpu-features to detect more arm64 features. (Change list 100339.)
+
+Android NDK, Revision 10 (July 2014)
+
+Android NDK, Revision 9d (March 2014)
+
+Android NDK, Revision 9c (December 2013)
+
+Android NDK, Revision 9b (October 2013)
+
+Android NDK, Revision 9 (July 2013)
+
+Android NDK, Revision 8e (March 2013)
+
+Android NDK, Revision 8d (December 2012)
+
+Android NDK, Revision 8c (November 2012)
+
+Android NDK, Revision 8b (July 2012)
+
+Android NDK, Revision 8 (May 2012)
+
+Android NDK, Revision 7c (April 2012)
+
+Android NDK, Revision 7b (February 2012)
+
+Android NDK, Revision 7 (November 2011)
+
+Android NDK, Revision 6b (August 2011)
+
+Android NDK, Revision 6 (July 2011)
+
+Android NDK, Revision 5c (June 2011)
+
+Android NDK, Revision 5b (January 2011)
+
+Android NDK, Revision 5 (December 2010)
+
+Android NDK, Revision 4b (June 2010)
+
+Android NDK, Revision 3 (March 2010)
+
+Android NDK, Revision 2 (September 2009)
+
+Android NDK, Revision 1 (June 2009)
+System and Software Requirements
+
+The sections below describe the system and software requirements for using the Android NDK, as well as platform compatibility considerations that affect appplications using libraries produced with the NDK.
+The Android SDK
+
+    A complete Android SDK installation (including all dependencies) is required.
+    Android 1.5 SDK or later version is required.
+
+Supported operating systems
+
+    Windows XP (32-bit) or Vista (32- or 64-bit)
+    Mac OS X 10.4.8 or later (x86 only)
+    Linux (32 or 64-bit; Ubuntu 8.04, or other Linux distributions using GLibc 2.7 or later)
+
+Required development tools
+
+    For all development platforms, GNU Make 3.81 or later is required. Earlier versions of GNU Make might work but have not been tested.
+    A recent version of awk (either GNU Awk or Nawk) is also required.
+    For Windows, Cygwin 1.7 or higher is required. The NDK will not work with Cygwin 1.5 installations.
+
+Android platform compatibility
+
+    The native libraries created by the Android NDK can only be used on devices running specific minimum Android platform versions. The minimum required platform version depends on the CPU architecture of the devices you are targeting. The following table details which Android platform versions are compatible with native code developed for specific CPU architectures.
+    Native Code CPU Architecture Used 	Compatible Android Platform(s)
+    ARM, ARM-NEON 	Android 1.5 (API Level 3) and higher
+    x86 	Android 2.3 (API Level 9) and higher
+    MIPS 	Android 2.3 (API Level 9) and higher
+
+    These requirements mean you can use native libraries produced with the NDK in applications that are deployable to ARM-based devices running Android 1.5 or later. If you are deploying native libraries to x86 and MIPS-based devices, your application must target Android 2.3 or later.
+    To ensure compatibility, an application using a native library produced with the NDK must declare a <uses-sdk> element in its manifest file, with an android:minSdkVersion attribute value of "3" or higher. For example:
+
+    <manifest>
+      <uses-sdk android:minSdkVersion="3" />
+      ...
+    </manifest>
+
+    If you use this NDK to create a native library that uses the OpenGL ES APIs, the application containing the library can be deployed only to devices running the minimum platform versions described in the table below. To ensure compatibility, make sure that your application declares the proper android:minSdkVersion attribute value, as shown in the following table.
+    OpenGL ES Version Used 	Compatible Android Platform(s) 	Required uses-sdk Attribute
+    OpenGL ES 1.1 	Android 1.6 (API Level 4) and higher 	android:minSdkVersion="4"
+    OpenGL ES 2.0 	Android 2.0 (API Level 5) and higher 	android:minSdkVersion="5"
+
+    For more information about API Level and its relationship to Android platform versions, see Android API Levels.
+    Additionally, an application using the OpenGL ES APIs should declare a <uses-feature> element in its manifest, with an android:glEsVersion attribute that specifies the minimum OpenGl ES version required by the application. This ensures that Google Play will show your application only to users whose devices are capable of supporting your application. For example:
+
+    <manifest>
+
+      <uses-feature android:glEsVersion="0x00020000" />
+      ...
+    </manifest>
+
+    For more information, see the <uses-feature> documentation.
+    If you use this NDK to create a native library that uses the API to access Android Bitmap pixel buffers or utilizes native activities, the application containing the library can be deployed only to devices running Android 2.2 (API level 8) or higher. To ensure compatibility, make sure that your application declares <uses-sdk android:minSdkVersion="8" /> attribute value in its manifest.
+
+Installing the NDK
+==========================================================================================================
+
+Installing the NDK on your development computer is straightforward and involves extracting the NDK from its download package.
+
+Before you get started make sure that you have downloaded the latest Android SDK and upgraded your applications and environment as needed. The NDK is compatible with older platform versions but not older versions of the SDK tools. Also, take a moment to review the System and Software Requirements for the NDK, if you haven't already.
+
+To install the NDK, follow these steps:
+
+    From the table at the top of this page, select the NDK package that is appropriate for your development computer and download the package.
+    Uncompress the NDK download package using tools available on your computer. When uncompressed, the NDK files are contained in a directory called android-ndk-<version>. You can rename the NDK directory if necessary and you can move it to any location on your computer. This documentation refers to the NDK directory as <ndk>.
+
+You are now ready to start working with the NDK.
+Getting Started with the NDK
+
+Once you've installed the NDK successfully, take a few minutes to read the documentation included in the NDK. You can find the documentation in the <ndk>/docs/ directory. In particular, please read the OVERVIEW.HTML document completely, so that you understand the intent of the NDK and how to use it.
+
+If you used a previous version of the NDK, take a moment to review the list of NDK changes in the CHANGES.HTML document.
+
+Here's the general outline of how you work with the NDK tools:
+
+    Place your native sources under <project>/jni/...
+    Create <project>/jni/Android.mk to describe your native sources to the NDK build system
+    Optional: Create <project>/jni/Application.mk.
+    Build your native code by running the 'ndk-build' script from your project's directory. It is located in the top-level NDK directory:
+
+    cd <project>
+    <ndk>/ndk-build
+
+    The build tools copy the stripped, shared libraries needed by your application to the proper location in the application's project directory.
+    Finally, compile your application using the SDK tools in the usual way. The SDK build tools will package the shared libraries in the application's deployable .apk file.
+
+For complete information on all of the steps listed above, please see the documentation included with the NDK package.
+Using the NDK
+
+The Android framework provides two ways to use native code:
+
+    Write your application using the Android framework and use JNI to access the APIs provided by the Android NDK. This technique allows you to take advantage of the convenience of the Android framework, but still allows you to write native code when necessary. If you use this approach, your application must target specific, minimum Android platform levels, see Android platform compatibility for more information.
+
+    Write a native activity, which allows you to implement the lifecycle callbacks in native code. The Android SDK provides the NativeActivity class, which is a convenience class that notifies your native code of any activity lifecycle callbacks (onCreate(), onPause(), onResume(), etc). You can implement the callbacks in your native code to handle these events when they occur. Applications that use native activities must be run on Android 2.3 (API Level 9) or later.
+
+    You cannot access features such as Services and Content Providers natively, so if you want to use them or any other framework API, you can still write JNI code to do so.
+
+Contents of the NDK
+==========================================================================================================
+
+The NDK contains the APIs, documentation, and sample applications that help you write your native code. Specifically:
+
+    A set of tools and build files used to generate native code libraries from C and C++ sources
+    A way to embed the corresponding native libraries into an application package file (.apk) that can be deployed on Android devices
+    A set of native system headers and libraries that will be supported in all future versions of the Android platform, starting from Android 1.5. Applications that use native activities must be run on Android 2.3 or later.
+    Documentation, samples, and tutorials
+
+The latest release of the NDK supports the following instruction sets:
+
+    ARMv5TE, including Thumb-1 instructions (see docs/CPU-ARCH-ABIS.html for more information)
+    ARMv7-A, including Thumb-2 and VFPv3-D16 instructions, with optional support for NEON/VFPv3-D32 instructions (see docs/CPU-ARM-NEON.html for more information)
+    x86 instructions (see docs/CPU-X86.html for more information)
+    MIPS instructions (see docs/CPU-MIPS.html for more information)
+
+ARMv5TE machine code will run on all ARM-based Android devices. ARMv7-A will run only on devices such as the Verizon Droid or Google Nexus One that have a compatible CPU. The main difference between the two instruction sets is that ARMv7-A supports hardware FPU, Thumb-2, and NEON instructions. You can target either or both of the instruction sets — ARMv5TE is the default, but switching to ARMv7-A is as easy as adding a single line to the application's Application.mk file, without needing to change anything else in the file. You can also build for both architectures at the same time and have everything stored in the final .apk. Complete information is provided in the CPU-ARCH-ABIS.HTML in the NDK package.
+
+The NDK provides stable headers for libc (the C library), libm (the Math library), OpenGL ES (3D graphics library), the JNI interface, and other libraries, as listed in the Development tools section.
+Development tools
+
+The NDK includes a set of cross-toolchains (compilers, linkers, etc..) that can generate native ARM binaries on Linux, OS X, and Windows (with Cygwin) platforms.
+
+It provides a set of system headers for stable native APIs that are guaranteed to be supported in all later releases of the platform:
+
+    libc (C library) headers
+    libm (math library) headers
+    JNI interface headers
+    libz (Zlib compression) headers
+    liblog (Android logging) header
+    OpenGL ES 1.1 and OpenGL ES 2.0 (3D graphics libraries) headers
+    libjnigraphics (Pixel buffer access) header (for Android 2.2 and above).
+    A Minimal set of headers for C++ support
+    OpenSL ES native audio libraries
+    Android native application APIS
+
+The NDK also provides a build system that lets you work efficiently with your sources, without having to handle the toolchain/platform/CPU/ABI details. You create very short build files to describe which sources to compile and which Android application will use them — the build system compiles the sources and places the shared libraries directly in your application project.
+
+Important: With the exception of the libraries listed above, native system libraries in the Android platform are not stable and may change in future platform versions. Your applications should only make use of the stable native system libraries provided in this NDK.
+Documentation
+
+The NDK package includes a set of documentation that describes the capabilities of the NDK and how to use it to create shared libraries for your Android applications. In this release, the documentation is provided only in the downloadable NDK package. You can find the documentation in the <ndk>/docs/ directory. Included are these files (partial listing):
+
+    INSTALL.HTML — describes how to install the NDK and configure it for your host system
+    OVERVIEW.HTML — provides an overview of the NDK capabilities and usage
+    ANDROID-MK.HTML — describes the use of the Android.mk file, which defines the native sources you want to compile
+    APPLICATION-MK.HTML — describes the use of the Application.mk file, which describes the native sources required by your Android application
+    CPLUSPLUS-SUPPORT.HTML — describes the C++ support provided in the Android NDK
+    CPU-ARCH-ABIS.HTML — a description of supported CPU architectures and how to target them.
+    CPU-FEATURES.HTML — a description of the cpufeatures static library that lets your application code detect the target device's CPU family and the optional features at runtime.
+    CHANGES.HTML — a complete list of changes to the NDK across all releases.
+    DEVELOPMENT.HTML — describes how to modify the NDK and generate release packages for it
+    HOWTO.HTML — information about common tasks associated with NDK development
+    IMPORT-MODULE.HTML — describes how to share and reuse modules
+    LICENSES.HTML — information about the various open source licenses that govern the Android NDK
+    NATIVE-ACTIVITY.HTML — describes how to implement native activities
+    NDK-BUILD.HTML — describes the usage of the ndk-build script
+    NDK-GDB.HTML — describes how to use the native code debugger
+    PREBUILTS.HTML — information about how shared and static prebuilt libraries work
+    STANDALONE-TOOLCHAIN.HTML — describes how to use Android NDK toolchain as a standalone compiler (still in beta).
+    SYSTEM-ISSUES.HTML — known issues in the Android system images that you should be aware of, if you are developing using the NDK.
+    STABLE-APIS.HTML — a complete list of the stable APIs exposed by headers in the NDK.
+
+Additionally, the package includes detailed information about the "bionic" C library provided with the Android platform that you should be aware of, if you are developing using the NDK. You can find the documentation in the <ndk>/docs/system/libc/ directory:
+
+    OVERVIEW.HTML — provides an overview of the "bionic" C library and the features it offers.
+
+Sample apps
+==========================================================================================================
+
+The NDK includes sample applications that illustrate how to use native code in your Android applications:
+
+    hello-jni — a simple application that loads a string from a native method implemented in a shared library and then displays it in the application UI.
+    two-libs — a simple application that loads a shared library dynamically and calls a native method provided by the library. In this case, the method is implemented in a static library imported by the shared library.
+    san-angeles — a simple application that renders 3D graphics through the native OpenGL ES APIs, while managing activity lifecycle with a GLSurfaceView object.
+    hello-gl2 — a simple application that renders a triangle using OpenGL ES 2.0 vertex and fragment shaders.
+    hello-neon — a simple application that shows how to use the cpufeatures library to check CPU capabilities at runtime, then use NEON intrinsics if supported by the CPU. Specifically, the application implements two versions of a tiny benchmark for a FIR filter loop, a C version and a NEON-optimized version for devices that support it.
+    bitmap-plasma — a simple application that demonstrates how to access the pixel buffers of Android Bitmap objects from native code, and uses this to generate an old-school "plasma" effect.
+    native-activity — a simple application that demonstrates how to use the native-app-glue static library to create a native activity
+    native-plasma — a version of bitmap-plasma implemented with a native activity.
+
+For each sample, the NDK includes the corresponding C source code and the necessary Android.mk and Application.mk files. There are located under <ndk>/samples/<name>/ and their source code can be found under <ndk>/samples/<name>/jni/.
+==========================================================================================================
+
+You can build the shared libraries for the sample apps by going into <ndk>/samples/<name>/ then calling the ndk-build command. The generated shared libraries will be located under <ndk>/samples/<name>/libs/armeabi/ for (ARMv5TE machine code) and/or <ndk>/samples/<name>/libs/armeabi-v7a/ for (ARMv7 machine code).
+
+Next, build the sample Android applications that use the shared libraries:
+
+    If you are developing in Eclipse with ADT, use the New Project Wizard to create a new Android project for each sample, using the "Import from Existing Source" option and importing the source from <ndk>/samples/<name>/. Then, set up an AVD, if necessary, and build/run the application in the emulator.
+    If you are developing with Ant, use the android tool to create the build file for each of the sample projects at <ndk>/samples/<name>/. Then set up an AVD, if necessary, build your project in the usual way, and run it in the emulator.
+
+For more information about developing with the Android SDK tools and what you need to do to create, build, and run your applications, see the Overview section for developing on Android.
+Exploring the hello-jni Sample
+
+The hello-jni sample is a simple demonstration on how to use JNI from an Android application. The HelloJni activity receives a string from a simple C function and displays it in a TextView.
+
+The main components of the sample include:
+==========================================================================================================
+
+    The familiar basic structure of an Android application (an AndroidManifest.xml file, a src/ and res directories, and a main activity)
+    A jni/ directory that includes the implemented source file for the native code as well as the Android.mk file
+    A tests/ directory that contains unit test code.
+
+    Create a new project in Eclipse from the existing sample source or use the android tool to update the project so it generates a build.xml file that you can use to build the sample.
+        In Eclipse:
+            Click File > New Android Project...
+            Select the Create project from existing source radio button.
+            Select any API level above Android 1.5.
+            In the Location field, click Browse... and select the <ndk-root>/samples/hello-jni directory.
+            Click Finish.
+        On the command line:
+            Change to the <ndk-root>/samples/hello-jni directory.
+            Run the following command to generate a build.xml file:
+
+            android update project -p . -s
+
+    Compile the native code using the ndk-build command.
+
+    cd <ndk-root>/samples/hello-jni
+    <ndk_root>/ndk-build
+
+    Build and install the application as you would a normal Android application. If you are using Eclipse, run the application to build and install it on a device. If you are using Ant, run the following commands from the project directory:
+
+    ant debug
+    adb install bin/HelloJni-debug.apk
+
+==========================================================================================================
+
+When you run the application on the device, the string Hello JNI should appear on your device. You can explore the rest of the samples that are located in the <ndk-root>/samples directory for more examples on how to use the JNI.
+Exploring the native-activity Sample Application
+
+The native-activity sample provided with the Android NDK demonstrates how to use the android_native_app_glue static library. This static library makes creating a native activity easier by providing you with an implementation that handles your callbacks in another thread, so you do not have to worry about them blocking your main UI thread. The main parts of the sample are described below:
+
+    The familiar basic structure of an Android application (an AndroidManifest.xml file, a src/ and res directories). The AndroidManifest.xml declares that the application is native and specifies the .so file of the native activity. See NativeActivity for the source or see the <ndk_root>/platforms/samples/native-activity/AndroidManifest.xml file.
+    A jni/ directory contains the native activity, main.c, which uses the android_native_app_glue.h interface to implement the activity. The Android.mk that describes the native module to the build system also exists here.
+
+To build this sample application:
+==========================================================================================================
+
+    Create a new project in Eclipse from the existing sample source or use the android tool to update the project so it generates a build.xml file that you can use to build the sample.
+        In Eclipse:
+            Click File > New Android Project...
+            Select the Create project from existing source radio button.
+            Select any API level above Android 2.3.
+            In the Location field, click Browse... and select the <ndk-root>/samples/native-activity directory.
+            Click Finish.
+        On the command line:
+            Change to the <ndk-root>/samples/native-activity directory.
+            Run the following command to generate a build.xml file:
+
+            android update project -p . -s
+
+    Compile the native code using the ndk-build command.
+
+    cd <ndk-root>/platforms/samples/android-9/samples/native-activity
+    <ndk_root>/ndk-build
+
+    Build and install the application as you would a normal Android application. If you are using Eclipse, run the application to build and install it on a device. If you are using Ant, run the following commands in the project directory, then run the application on the device:
+
+    ant debug
+    adb install bin/NativeActivity-debug.apk
+
+

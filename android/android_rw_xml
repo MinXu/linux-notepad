@@ -1,0 +1,69 @@
+你对资源还不熟，这几天我专门搞懂了它。有两种形式，有差异
+---------------------------
+如何将文件打包为资源并在程序中读取
+
+1.新建原文件资源文件夹：
+<1>在工程 res--->New-->Folder 新建raw文件夹; <2>点 res-->Build Path-->Use as Source Folder, 将在工程下产生 res/raw 就是文件资源夹;
+2.将你的任意文件如test.txt 复制粘贴到 res/raw中，就是文件资源了，将打包在工程APK中；
+文件名不能有汉字和大写字母，允许小写字母与数字，如 test.txt
+资源路径将是 R.raw.test,  存盘和点运行后，将更新资源标识产生 R.raw.test
+3.在程序中可以将资源读到你的变量中，如读到一串变量中：
+import java.io.*;
+public class AboutActivity extends Activity {
+
+	TextView textView21;
+	private String readStream(InputStream is)
+	{    // 资源流(GBK汉字码）变为串
+		String res;
+		try
+		{
+			byte[] buf = new byte[is.available()];         
+			is.read(buf);
+			res = new String(buf,"GBK");      //  必须将GBK码制转成Unicode  
+			is.close();
+		} catch (Exception e)
+		{
+			res="";  
+		}
+		return(res);   
+		//  把资源文本文件送到String串中   
+		)}
+		@Override
+			protected void onCreate(Bundle savedInstanceState) {
+				super.onCreate(savedInstanceState);
+				setContentView(R.layout.activity_about);
+				textView21=(TextView)findViewById(R.id.textView21);
+				textView21.setText(
+						readStream(getResources().openRawResource(R.raw.test))
+						);       //   放到文本控件  textView21
+			}
+
+		另一办法，将text.txt文件复制粘贴到工程assets目录，访问资源不是按Id访问，
+			以文件名访问,文件名不能有汉字，但允许有大写字母，
+			在Activity中，代码：
+			AssetManger aM=getAssets();
+		InputStream is=aM.open("test.txt");
+		// read from res
+		is.close()
+
+			追问
+
+			如果一定要建立file类的话，如何做啊，学校做一个学习项目，正好得用android，突击了一下。。
+
+			回答
+
+			第二种，就是文件类了。
+			我写的够详细的了，这是我周末的心得，全捐出了
+			AssetManger aM=getAssets();
+		try
+		{
+			InputStream is=aM.open("test.txt");
+			// read from res
+			String txt=readStream(is);
+			is.close();
+		}
+		catch(Exception e)
+		{
+		}
+
+}
