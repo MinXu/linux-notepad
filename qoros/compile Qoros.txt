@@ -1,0 +1,20 @@
+make ARCH=arm CROSS_COMPILE=/opt/arm-harman-linux-gnueabi-1.1.0/bin/arm-harman-linux-gnueabi- clean
+==========================================================================================================
+
+Location: //RSP/os/linux/kernel/0.1/release/kernel-build/linux-2.6.34.10/
+Please get it from P4.
+
+Build the kernel steps:
+1.	Change the rootfs directory as yours.
+cd  linux-2.6.34.10
+vi arch/arm/configs/harman_tcm_defconfig
+Then find the following line:
+CONFIG_INITRAMFS_SOURCE="/home/hongchao/work/test/rootfs_qoros"
+
+2.	Build the kernel.
+make ARCH=arm harman_tcm_defconfig
+make ARCH=arm CROSS_COMPILE=/opt/arm-harman-linux-gnueabi-1.1.0/bin/arm-harman-linux-gnueabi- uImage
+
+Fix CROSS_COMPILE as your toolchain.
+
+If you build successfully, you will get the uImage file at arch/arm/boot/uImage
