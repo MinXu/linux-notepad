@@ -1,0 +1,5 @@
+#install:
+sudo grub-install --root-directory=/mnt/dev/sda
+
+#updata:
+sudo update-grub2
