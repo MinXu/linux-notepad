@@ -1,0 +1,9 @@
+#tr SET1 SET2 ----replace the SET1 with SET2
+
+BL := libnl,libconfig,libpcap,gpsd,c-algorithms,openssl,chrony,flex,pam,openvpn,rpyc,directfb-examples,can-utils,radvd,apscheduler,minisnmp,bird,ndppd,gogoc,libxml,zlib,nvsupdate
+@for target in `echo $(BL) | tr , ' '` ; do  \
+                if ! $(MAKE) $${target} ; then  \
+                        exit 1 ;  \
+                fi ;  \
+        done
+
