@@ -1,0 +1,21 @@
+#!/bin/sh
+#nfs client install tools for kernel
+#sudo apt-get install nfs-common
+
+IP=192.168.1.158
+RCMC=/home/xumin/WorkDisk/WorkSpace/v2v-phaseII/cmc
+LCMC=/home/duser/other/cmc
+RMK3BOARD=/home/xumin/WorkDisk/WorkSpace/v2v-phaseII/mk3-board
+LMK3BOARD=/home/duser/other/mk3-board
+
+if [ $# -ge 1 ] ;then
+	IP=$1
+fi
+
+echo "mount nfs from $IP ..."
+
+mkdir -p $LCMC
+mkdir -p $LMK3BOARD
+
+sudo mount -t nfs ${IP}:$RCMC $LCMC
+sudo mount -t nfs ${IP}:$RMK3BOARD $LMK3BOARD

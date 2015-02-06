@@ -1,0 +1,11 @@
+#!/bin/sh
+
+LCMC=/home/duser/other/cmc
+LMK3BOARD=/home/duser/other/mk3-board
+
+echo "umount nfs ..."
+sudo umount $LCMC
+sudo umount $LMK3BOARD
+
+rm -rf $LCMC
+rm -rf $LMK3BOARD
