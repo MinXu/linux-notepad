@@ -1,0 +1,6 @@
+#copy the vm linux to real host disk
+#copy disk
+sudo dd if=/dev/sda of=/path/image
+
+#restore disk
+sudo dd if=/path/image of=/dev/sda
