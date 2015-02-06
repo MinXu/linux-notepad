@@ -1,0 +1,15 @@
+#create the file it is 1M(here it is)
+dd if=/dev/zero bs=1024 count=1024 of=/path/image
+
+#format the file
+mke2fs /path/image
+
+#mount the file to rootfs
+mkdir rootfs
+mount -o loop /path/image rootfs
+
+#copy the bin etc ... to rootfs dir
+*cp rootfs_tools to rootfs/
+
+#umount it
+umount rootfs

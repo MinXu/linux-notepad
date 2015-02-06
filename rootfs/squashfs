@@ -1,0 +1,3 @@
+#create the squashfs filesystem, it is read only, so the ROOTFS_DIR is a full function rootfs
+#lzo is a compess format, just like gzip
+mksquashfs $(ROOTFS_DIR) $(ROOTFS_IMG) -com lzo
