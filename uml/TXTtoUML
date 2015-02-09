@@ -1,3 +1,6 @@
+#plantuml websit description
+http://www.plantuml.com/
+
 #check and install graphviz
 java -jar ./plantuml.jar -testdot
 sudo apt-get install graphviz
