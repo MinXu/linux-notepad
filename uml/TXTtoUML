@@ -1,0 +1,6 @@
+#check and install graphviz
+java -jar ./plantuml.jar -testdot
+sudo apt-get install graphviz
+
+#generate the png from text scripte
+java -jar ./plantuml.jar streamsetup

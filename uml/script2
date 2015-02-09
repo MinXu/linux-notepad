@@ -1,0 +1,22 @@
+@startuml
+
+object firstObject
+firstObject : name = "xumin"
+firstObject : idx = 111
+
+object sss
+sss : name = "sss"
+sss : idx = 222
+
+object "My Second Object" as o2
+o2 : name = "xxx"
+
+firstObject .. o2
+
+o2 *.. sss
+
+sss <|.. firstObject
+
+sss o.. o2
+
+@enduml

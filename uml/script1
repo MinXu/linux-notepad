@@ -1,0 +1,62 @@
+In the following examples, establishment of the stream is controlled by a SVCIPC message from outside the AVB Mangement Service process.
+
+Local Talker, Remote Listener
+@startuml
+SVCIPC ->> Dispatch: Local.ConnectionMaster.BuildConnection(LocalSource, RemoteSink)
+Dispatch ->> ConnectionMaster: BuildConnection(LocalSource, RemoteSink)
+ConnectionMaster -> LocalStreamControl: StartSource
+LocalStreamControl ->> AVBStateMachine: TALKER_SETUP for Source
+LocalStreamControl --> ConnectionMaster: StreamID for Source
+AVBStateMachine ->> SRPInterface: TALKER_ADVERTISE
+ConnectionMaster ->> Dispatch: Remote.RemoteSinkFB.Connect(StreamID)
+Dispatch ->> AMS: Remote.RemoteSinkFB.Connect(StreamID)
+AMS ->> UDPInterface: Transmit FBlock message to network
+SRPInterface ->> AVBStateMachine: LISTENER_READY
+AVBStateMachine ->> AVTPInterface: Start stream
+UDPInterface ->> AMS: Receive FBlock message from network
+AMS ->> Dispatch: Local.RemoteSinkFB.Connect(StreamID) success
+Dispatch ->> ConnectionMaster: RemoteSinkFB.Connect(StreamID) success
+ConnectionMaster ->> Dispatch: Local.ConnectionMaster.BuildConnection success
+Dispatch ->> SVCIPC: Local.ConnectionMaster.BuildConnection success
+@enduml
+
+Remote Talker, Remote Listener
+@startuml
+SVCIPC ->> Dispatch: Local.ConnectionMaster.BuildConnection(RemoteSource, RemoteSink)
+Dispatch ->> ConnectionMaster: BuildConnection(RemoteSource, RemoteSink)
+ConnectionMaster ->> Dispatch: Remote1.RemoteSourceFB.Allocate(RemoteSource)
+Dispatch ->> AMS: Remote1.RemoteSourceFB.Allocate(RemoteSource)
+AMS ->> UDPInterface: Transmit FBlock message to network
+UDPInterface ->> AMS: Receive FBlock message from network
+AMS ->> Dispatch: Local.RemoteSourceFB.Allocate(RemoteSource) success
+Dispatch ->> ConnectionMaster: RemoteSourceFB.Allocate(RemoteSource) success
+ConnectionMaster ->> Dispatch: Remote2.RemoteSinkFB.Connect(StreamID)
+Dispatch ->> AMS: Remote2.RemoteSinkFB.Connect(StreamID)
+AMS ->> UDPInterface: Transmit FBlock message to network
+UDPInterface ->> AMS: Receive FBlock message from network
+AMS ->> Dispatch: Local.RemoteSinkFB.Connect(StreamID) success
+Dispatch ->> ConnectionMaster: RemoteSinkFB.Connect(StreamID) success
+ConnectionMaster ->> Dispatch: Local.ConnectionMaster.BuildConnection success
+Dispatch ->> SVCIPC: Local.ConnectionMaster.BuildConnection success
+@enduml
+
+Remote Talker, Local Listener
+@startuml
+SVCIPC ->> Dispatch: Local.ConnectionMaster.BuildConnection(RemoteSource, LocalSink)
+Dispatch ->> ConnectionMaster: BuildConnection(RemoteSource, LocalSink)
+ConnectionMaster ->> Dispatch: Remote.RemoteSourceFB.Allocate(RemoteSource)
+Dispatch ->> AMS: Remote.RemoteSourceFB.Allocate(RemoteSource)
+AMS ->> UDPInterface: Transmit FBlock message to network
+UDPInterface ->> AMS: Receive FBlock message from network
+AMS ->> Dispatch: Local.RemoteSourceFB.Allocate(RemoteSource) success
+Dispatch ->> ConnectionMaster: RemoteSourceFB.Allocate(RemoteSource) success
+ConnectionMaster -> LocalStreamControl: StartSink(Stream ID)
+LocalStreamControl ->> AVBStateMachine: LISTENER_SETUP for Sink(Stream ID)
+LocalStreamControl --> ConnectionMaster: Sink started
+ConnectionMaster ->> Dispatch: Local.ConnectionMaster.BuildConnection success
+Dispatch ->> SVCIPC: Local.ConnectionMaster.BuildConnection success
+AVBStateMachine ->> SRPInterface: Query stream ID of source
+SRPInterface ->> AVBStateMachine: TALKER_ADVERTISE received for Stream ID
+AVBStateMachine ->> SRPInterface: Register LISTENER_READY
+AVBStateMachine ->> AVTPInterface: Start stream listener
+@enduml
