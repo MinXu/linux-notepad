@@ -1,0 +1,61 @@
+
+#=====================================================================================================================================
+#image-ramfs
+   1. can be format
+   2. fix size
+   3. a virtual file system work on hardware memory
+
+#build kernel
+make ARCH=arm uImage
+#or
+make ARCH=arm zImage 
+mkimage -A arm -O linux -T kernel -C none -a 0x30008000 -e 0x30008000 -n "Linux kernel Image" -d zImage uImage-ramdisk
+
+
+#create the ramdisk from rootfs file
+dd if=/dev/zero of=ramdisk bs=1k count=8000
+mkfs.ext2 -j ramdisk
+sudo mount -o loop ramdisk /mnt
+rm -rf /mnt/*
+make ARCH=arm modules
+make ARCH=arm INSTALL_MOD_PATH=/mnt modules_install 
+sudo cp -R busybox/_install /mnt
+ln -sv bin/busybox init
+sudo umount /mnt
+sudo cp ramdisk /boot/ramdisk
+mkimage -A arm -O linux -T ramdisk -C none -a 0x20800000 -n "ramdisk" -d initrd.gz ramdisk-uboot.img
+
+#or from rootfs dir
+genext2fs -b 4096 -d rootfs ramdisk
+	#-b是指制作的ramdisk大小为4096K字节
+	#-d是指要制作成ramdisk的根文件系统目录  
+
+#=====================================================================================================================================
+#cpio-ramfs
+  1. can not be format
+  2. auto dynamic size
+  3. a virtual file system work on hardware memory
+
+#extrac the initramfs to fix
+cpio -i -F ../initramfs_data.cpio.gz --no-absolute-filename 
+#or
+cpio -i -F ../initramfs_data.cpio.gz >/mnt
+
+#create the initramfs
+gunzip ../initramfs_data.cpio.gz
+cpio -i -t -F ../initramfs_data.cpio >list
+cpio -o -H newc -O ../initramfs_data2.cpio <list
+gzip -9 ../initramfs_data.cpio
+
+find . -print| cpio -o -H newc |gzip -9> ../initramfs.cpio.gz 
+cpio -i -t -F ../initramfs_data.cpio.gz|cpio -o -H newc -O ../initramfs_data2.cpio|gzip -9
+
+
+
+#创建initramfs
+mkinitramfs -o /boot/initrd.img 2.6.2
+#更新当前kernel的initramfs
+update-initramfs -u
+#new tool 创建initramfs
+mkinitcpio
+
