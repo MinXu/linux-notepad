@@ -75,7 +75,7 @@ cpio -o -H newc -O ../initramfs_data2.cpio <list
 gzip -9 ../initramfs_data.cpio
 
 find . -print| cpio -o -H newc |gzip -9> ../initramfs.cpio.gz 
-cpio -i -t -F ../initramfs_data.cpio.gz|cpio -o -H newc -O ../initramfs_data2.cpio|gzip -9
+cpio -i -t -F ../initramfs_data.cpio.gz|cpio -o -H newc |gzip -9> ../initramfs.cpio.gz
 
 
 #x86 create the initramfs tools
