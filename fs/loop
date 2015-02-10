@@ -20,3 +20,7 @@ losetup -a
 #detach device
 losetup -d /dev/loop0
 
+
+
+# mount the iso 
+mount -t iso9660 -t loop xxx.iso /mnt
