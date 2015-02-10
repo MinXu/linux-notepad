@@ -1,0 +1,22 @@
+
+
+dd if=/dev/zero of=/file bs=1k count=100
+
+
+losetup -e des /dev/loop0 /file
+    Password: Init (up to 16 hex digits):
+mkfs -t ext2 /dev/loop0 100
+mount -t ext2 /dev/loop0 /mnt ...
+#or
+mount -t ext2 -o loop file /mnt
+
+
+umount /dev/loop0
+#or 
+umount /mnt
+
+#list all device
+losetup -a
+#detach device
+losetup -d /dev/loop0
+
