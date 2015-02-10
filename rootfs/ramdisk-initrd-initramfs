@@ -1,5 +1,32 @@
+#initramfs 简介，一个新的 initial RAM disks 模型  (ramdisk/initrd/ramfs/tmpfs)
+	ramdisk:: 
+		  need the file system driver(ex2fs)
+		  fix size
+                  can be formated
+		  is a block device (lost more memory and more cache)
 
-initramfs 简介，一个新的 initial RAM disks 模型 
+	initrd:: 
+      	          run the /linuxrc to told th kernel mount the real-root-dev (通过写入de_t 数据到 /proc/sys/kernel/real-root-dev)
+                  the rootfs can not be network device
+                  the rootfs is not the initrd self
+
+        ramfs/tmpfs:: 
+                  not need the file system driver(only in the memory)
+		  only in the memory
+		  dynamic size
+                  can not be formated
+                  no block device
+                  running the /init for the PID 1 process
+
+        tmpfs::
+		  in the swap or memory
+                  limited the mount point max size
+		  ---------> initramfs(a tmpfs exapmle)
+				the initramfs can be built in kernel
+				there is a init in the initramfs
+			
+
+
 #=====================================================================================================================================
 #image-ramfs
    1. can be format
@@ -24,13 +51,21 @@ sudo cp -R busybox/_install /mnt
 ln -sv bin/busybox init
 sudo umount /mnt
 sudo cp ramdisk /boot/ramdisk
-mkimage -A arm -O linux -T ramdisk -C none -a 0x20800000 -n "ramdisk" -d initrd.gz ramdisk-uboot.img
+
+gzip -9 ramdisk
+mkimage -A arm -O linux -T ramdisk -C none -a 0x600000 -e 0x600000 -n "ramdisk" -d ramdisk.gz         ramdisk-uboot.img
+mkimage -A arm -O linux -T ramdisk -C none -a 0x600000 -e 0x600000 -n "ramdisk" -d initrd_cpio.img.gz ramdisk-uboot.img
 
 #or from rootfs dir
 genext2fs -b 4096 -d rootfs ramdisk
 	#-b是指制作的ramdisk大小为4096K字节
 	#-d是指要制作成ramdisk的根文件系统目录  
 
+#or from rootfs file
+mkfs.ext2 -F -v -m0 ramdisk
+-F :  迫使 mke2fs 在 ramdisk.image 上运行 ,  否则 , mke2fs 会抱怨 ramdisk.image 不是块设备 . 
+-v :  以 verbose 模式运行 
+-m0 :  指定不必在文件系统上为 " 超级用户 " 保留任何 block.( 一般嵌入式 Linux 都是单用户系统 ). 
 #=====================================================================================================================================
 #cpio-ramfs
   1. can not be format
@@ -52,11 +87,11 @@ find . -print| cpio -o -H newc |gzip -9> ../initramfs.cpio.gz
 cpio -i -t -F ../initramfs_data.cpio.gz|cpio -o -H newc -O ../initramfs_data2.cpio|gzip -9
 
 
-
+#x86 create the initramfs tools
 #创建initramfs
 mkinitramfs -o /boot/initrd.img 2.6.2
 #更新当前kernel的initramfs
 update-initramfs -u
-#new tool 创建initramfs
+#new tool 创建initramfs in Arch Linux
 mkinitcpio
 
