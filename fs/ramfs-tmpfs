@@ -1,0 +1,38 @@
+#你的主机关闭后，所有在RamDisk上创建的文件都会消失
+# 如果你卸载了RamDisk，你的数据依然会保存在那里。一旦内存被分配给了RamDisk，它就会被标记，之后内核就不会试图重用这块内存。因此，使用了RamDisk后，就不能回收那块内存。正因如此，你要考虑清楚，不要给RamDisk分配太多的内存。在我的系统里，我分配了小于10%的物理内存。你要根据自己的需要确定RamDisk的大小。当然，也可以重启后释放空间。
+==RAMDISK========================================================================================================================================
+#格式化
+mke2fs -m0 -V -F /dev/ram0
+
+#tune2fs命令查看新RamDisk的详细信息
+tune2fs -l /dev/ram0  
+
+#mount 到挂载点
+mount -o loop /dev/ram0 xxx
+
+#查看 ramdisk大小
+df -m xxx
+
+#查看 ramdisk mount point 里面文件大小
+du xxx
+
+
+==========================================================================================================================================
+mkdir  /testRAM
+mount -t ramfs none /testRAM
+#缺省情况下，Ramfs被限制最多可使用内存大小的一半。可以通过maxsize（以kbyte为单位）选项来改变。
+mount -t ramfs none /testRAM -o maxsize=2000 (创建了一个限定最大使用内存为2M的ramdisk） 
+
+
+mkdir -p /testRAM
+mount -t tmpfs tmpfs /testRAM
+#or
+mount -t tmpfs none  /testRAM
+#同样可以在加载时指定tmpfs文件系统大小的最大限制：
+mount -t tmpfs tmpfs /testRAM -o size=32m 
+#or
+mount -t tmpfs none  /testRAM -o size=2000
+
+
+
+
