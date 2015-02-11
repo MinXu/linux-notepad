@@ -79,10 +79,23 @@ cpio -i -t -F ../initramfs_data.cpio.gz|cpio -o -H newc |gzip -9> ../initramfs.c
 
 
 #x86 create the initramfs tools
-#创建initramfs
-mkinitramfs -o /boot/initrd.img 2.6.2
+#创建initramfs 
+#在添加模块时，initramfs tools只会添加一些必要模块，用户可以通过在/etc/initramfs-tools/modules文件中加入模块名称来指定必须添加的模块。
+mkinitramfs -o /boot/initrd.img 2.6.2  #其中2.6.26为/lib/modules下的目录名称.
+
+
 #更新当前kernel的initramfs
 update-initramfs -u
+
+
 #new tool 创建initramfs in Arch Linux
 mkinitcpio
+
+
+mkinitrd类似于mkinitramfs，是用于生成initrd的一个工具。最基本的用法参考下面：
+#如果需要指定哪些module在启动时必须load，需要加上--preload=module或者 --with=module这样的选项。 这两者的区别在于--preload指定的module会在/etc/modprobe.d/* 里声明的任何SCSI模块之前被加载，--with指定的module会在/etc/modprobe.d/* 里声明的任何SCSI模块之后被加载。
+
+#另外还有一个选项需要被注意，即--builtin=module。在manual里这个选项的解释是：Act as if module is built into the kernel being used. mkinitrd will not look for this module, and will not emit an error if it does not exist. This option may be used multiple times.
+#根据上面的解释，可以看出builtin选项另外还有一个取巧的用处。以我所用的平台Acer Aspire One为例， 我在用mkinitrd制作RAM disk镜像是出现一个错误“No module ohci-hcd found ...”，遇到这个情况，builtin选项就起作用了，用--builtin=ohci-hcd， mkinitrd就可以忽略ohci-hcd不存在这个事实了。
+mkinitrd /boot/initrd.img $(uname -r)
 
