@@ -9,7 +9,6 @@ sudo apt-get install uuid-dev
 ===================================Install=======================================================
 make 成功产生mkfs.ubifs
 
- 
 ===================================Build=======================================================
 接着把_install做成ubifs文件系统：
 ./mkfs.ubifs -r <path>/_install -m 512 -e 15360 -c 3897 -o ubifs.img
@@ -20,3 +19,12 @@ Options:
     -e, --leb-size=SIZE      logical erase block size
     -c, --max-leb-cnt=COUNT  maximum logical erase block count
     -o, --output=FILE        output to FILE
+
+
+===================================Kernel Configure=============================================
+配置linux内核 （2.6.28 以上 kernel 已经包含 ubifs, 早期的kernel 还得去官网上找找，我的就是 2.6.28)
+    配置的时候选上
+   1)Device Drivers  --->Memory Technology Device (MTD) support  --->UBI - Unsorted block images  --->Enable UBI
+   2)File systems  --->Miscellaneous filesystems  --->UBIFS file system support
+    这样我们的内核就支持UBIFS文件系统了
+
