@@ -1,3 +1,21 @@
+========================================hello world init===============================================================
+$ mkdir -p hello-initramfs
+#首先設立的目標是，可印出 "Hello World" 的 kernel + initramfs，並透過 qemu 進行模擬驗證。首先，建立一個 init.c，具備簡單的實做：
+$ cd hello-initramfs
+$ cat init.c
+#include <stdio.h>
+int main()
+{
+	printf("Hello World!\n");
+	sleep(99999);
+	return 0;
+}
+$ gcc -static -o init init.c
+$ mkdir -p dev
+$ sudo mknod dev/console c 5 1
+find . | cpio -o -H newc | gzip > ../my_initramfs.cpio.gz
+qemu -kernel arch/i386/boot/bzImage -initrd ../hello2-initramfs/my_initramfs.cpio.gz -hda /dev/zero
+========================================busybox===============================================================
 $ sudo apt-get install busybox-static
 
 #隨後，系統會安裝 /bin/busybox 的執行檔，觀察一下：
@@ -13,6 +31,7 @@ $ mkdir -p busybox-initramfs/proc
 $ cd busybox-initramfs/bin
 $ cp /bin/busybox .
 $ ./busybox --help | ruby -e 'STDIN.read.split(/functions:$/m)[1].split(/,/).each{|i|`ln -s busybox #{i.strip}` unless i=~/busybox/}'
+#$ 也许需要copy /lib /lib64 目录
 $ cd ..
 $ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
 $ find . | cpio -o -H newc | gzip > ../busybox.initramfs.cpio.gz
@@ -33,6 +52,7 @@ $ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > ini
 #也許可以改成
 
 $ cp /bin/busybox .
+$ mkdir -p sbin user/bin user/sbin
 $ cd ..
 $ echo -e '#!/bin/busybox sh\n/bin/busybox --install -s\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
 
