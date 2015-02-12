@@ -1,0 +1,48 @@
+$ sudo apt-get install busybox-static
+
+#隨後，系統會安裝 /bin/busybox 的執行檔，觀察一下：
+
+$ file /bin/busybox
+/bin/busybox: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), for GNU/Linux 2.6.8, statically linked, stripped
+
+#咱們就以此為基礎，建立一個小而美的 initramfs + kernel image：
+
+$ cd /home/jserv/initramfs-workspace
+$ mkdir -p busybox-initramfs/bin
+$ mkdir -p busybox-initramfs/proc
+$ cd busybox-initramfs/bin
+$ cp /bin/busybox .
+$ ./busybox --help | ruby -e 'STDIN.read.split(/functions:$/m)[1].split(/,/).each{|i|`ln -s busybox #{i.strip}` unless i=~/busybox/}'
+$ cd ..
+$ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
+$ find . | cpio -o -H newc | gzip > ../busybox.initramfs.cpio.gz
+
+#可看到 $HOME/initramfs-workspace 就輸出了名為 busybox.initramfs.cpio.gz 的 initramfs image，可仿造上一個範例，透過 qemu 模擬：
+
+$ cd /home/jserv/initramfs-workspace/linux-2.6.22.5
+qemu -kernel arch/i386/boot/bzImage -initrd ../busybox.initramfs.cpio.gz -hda /dev/zero
+
+
+
+=====================================================================================================================================
+$ cp /bin/busybox .
+$ ./busybox --help | ruby -e 'STDIN.read.split(/functions:$/m)[1].split(/,/).each{|i|`ln -s busybox #{i.strip}` unless i=~/busybox/}'
+$ cd ..
+$ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
+
+#也許可以改成
+
+$ cp /bin/busybox .
+$ cd ..
+$ echo -e '#!/bin/busybox sh\n/bin/busybox --install -s\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
+
+
+#問題在於以第二種方法, 必須精確地把initramfs.cpio.gz的檔案長度透過boot option傳入, 否則gunzip 會嘗試繼續 decode檔案之後的空間, 造成gzip 錯誤
+
+
+
+#或在利用 chroot busybox-initramfs /bin/busybox sh
+
+#就不用 ruby 了~ 對初學者可能會更簡單~ :)
+#當然 jserv 也許有效率上的考量
+#先建好就不用在 runtime 花時間建立
