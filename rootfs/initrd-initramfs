@@ -99,3 +99,19 @@ mkinitrd类似于mkinitramfs，是用于生成initrd的一个工具。最基本�
 #根据上面的解释，可以看出builtin选项另外还有一个取巧的用处。以我所用的平台Acer Aspire One为例， 我在用mkinitrd制作RAM disk镜像是出现一个错误“No module ohci-hcd found ...”，遇到这个情况，builtin选项就起作用了，用--builtin=ohci-hcd， mkinitrd就可以忽略ohci-hcd不存在这个事实了。
 mkinitrd /boot/initrd.img $(uname -r)
 
+
+
+#==============================================================================================================================================
+#initramfs:
+	1. running the /init (eg. ln -s /linuxrc init)
+	2. not be readonly
+	3. PID 1 process is /init
+	4. if /init is a script, need the /lib(/lib64)
+	5. sudo qemu-system-x86_64 -kernel /home/xumin/WorkDisk/WorkSpace/tcp-acceleration/tcp_source/linux-source-3.8.0/arch/x86_64/boot/bzImage -initrd ./hello2-initrd  -append root=/dev/ram0
+
+#ramdisk:
+	1. running the /sbin/init --------> /etc/rcS
+	2. be readonly
+	3. no PID 1 process
+	4. sudo qemu-system-x86_64 -kernel /home/xumin/WorkDisk/WorkSpace/tcp-acceleration/tcp_source/linux-source-3.8.0/arch/x86_64/boot/bzImage -initrd ./hello2-initrd  -append root=/dev/ram0
+

@@ -15,7 +15,7 @@ $ mkdir -p dev
 $ sudo mknod dev/console c 5 1
 find . | cpio -o -H newc | gzip > ../my_initramfs.cpio.gz
 qemu -kernel arch/i386/boot/bzImage -initrd ../hello2-initramfs/my_initramfs.cpio.gz -hda /dev/zero
-========================================busybox===============================================================
+========================================static busybox===============================================================
 $ sudo apt-get install busybox-static
 
 #隨後，系統會安裝 /bin/busybox 的執行檔，觀察一下：
@@ -42,27 +42,34 @@ $ cd /home/jserv/initramfs-workspace/linux-2.6.22.5
 qemu -kernel arch/i386/boot/bzImage -initrd ../busybox.initramfs.cpio.gz -hda /dev/zero
 
 
+=======================================three way of install static busybox==========================================================================
+#ruby:
+	$ cp /bin/busybox .
+	$ ./busybox --help | ruby -e 'STDIN.read.split(/functions:$/m)[1].split(/,/).each{|i|`ln -s busybox #{i.strip}` unless i=~/busybox/}'
+	$ cd ..
+	$ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
 
-=====================================================================================================================================
-$ cp /bin/busybox .
-$ ./busybox --help | ruby -e 'STDIN.read.split(/functions:$/m)[1].split(/,/).each{|i|`ln -s busybox #{i.strip}` unless i=~/busybox/}'
-$ cd ..
-$ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
 
 #也許可以改成
+#chroot:
+	$ $ cp /bin/busybox .
+	$ mkdir -p bin sbin user/bin user/sbin
+	$ chroot . ./bin/busybox sh
+	$ /bin/busybox --install -s
+	$ cd ..
+	$ echo -e '#!/bin/busybox sh\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
+	$ exit
 
-$ cp /bin/busybox .
-$ mkdir -p sbin user/bin user/sbin
-$ cd ..
-$ echo -e '#!/bin/busybox sh\n/bin/busybox --install -s\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
+
+#也许还可以改成
+#onboard:
+	$ cp /bin/busybox .
+	$ mkdir -p sbin user/bin user/sbin
+	$ cd ..
+	$ echo -e '#!/bin/busybox sh\n/bin/busybox --install -s\nmount -t proc proc /proc\nexec busybox sh\n' > init ; chmod +x init
 
 
 #問題在於以第二種方法, 必須精確地把initramfs.cpio.gz的檔案長度透過boot option傳入, 否則gunzip 會嘗試繼續 decode檔案之後的空間, 造成gzip 錯誤
-
-
-
-#或在利用 chroot busybox-initramfs /bin/busybox sh
-
 #就不用 ruby 了~ 對初學者可能會更簡單~ :)
 #當然 jserv 也許有效率上的考量
 #先建好就不用在 runtime 花時間建立
