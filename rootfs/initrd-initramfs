@@ -114,4 +114,5 @@ mkinitrd /boot/initrd.img $(uname -r)
 	2. be readonly
 	3. no PID 1 process
 	4. sudo qemu-system-x86_64 -kernel /home/xumin/WorkDisk/WorkSpace/tcp-acceleration/tcp_source/linux-source-3.8.0/arch/x86_64/boot/bzImage -initrd ./hello2-initrd  -append root=/dev/ram0
+	5. sudo qemu-system-x86_64 -kernel /home/xumin/WorkDisk/WorkSpace/tcp-acceleration/tcp_source/linux-source-3.8.0/arch/x86_64/boot/bzImage -initrd ./hello2-initrd  -append "root=/dev/ram0 rw"
 
