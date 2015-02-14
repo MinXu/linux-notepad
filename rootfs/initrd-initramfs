@@ -10,6 +10,10 @@
                   the rootfs can not be network device
                   the rootfs is not the initrd self
 
+	loopback::
+		  mount到文件
+		  mount -o loop xxx uuu
+
         ramfs/tmpfs(cpio-ramfs):: 
                   not need the file system driver(only in the memory)
 		  dynamic size
