@@ -64,9 +64,11 @@ image-initrd的处理流程
 		  is a block device 
 
 	initrd:: 
-      	          run the /linuxrc to told th kernel mount the real-root-dev (通过写入de_t 数据到 /proc/sys/kernel/real-root-dev)
+      	          run the /linuxrc(initrd is not the real rootfs) to install the driver and get the kernel mount the real-root-dev (通过写入de_t 数据到 /proc/sys/kernel/real-root-dev)
+		  run the /sbin/init(initrd is the real rootfs)
                   the rootfs can not be network device
                   the rootfs is not the initrd self
+		  
 
 	loopback::
 		  mount到文件
@@ -86,6 +88,7 @@ image-initrd的处理流程
 		  ---------> initramfs(a tmpfs exapmle)
 				the initramfs can be built in kernel
 				there is a init in the initramfs
+				run the /init(script) to install the driver and mount the real rootfs
 			
 
 
