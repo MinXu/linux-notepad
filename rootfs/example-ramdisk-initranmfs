@@ -1,0 +1,86 @@
+ramdisk=============================================================================================================================
+打开配置菜单，修改两个配置项，分别是：
+a）：General setup-->选择 Initial RAM filesystem and RAM disk...... 项
+b）：Device Drivers-->Block devices-->选择 RAM block device support 项
+
+
+Optimize for size是否被选中，如果没有则选中，此项优化内核大小，根据需要进行配置。
+修改（8192）Default RAM disk size kbytes选项为（4096）Default RAM disk size kbytes
+
+
+File systems菜单，选上<*> Second extended fs support
+
+
+a）：修改.config的第310行，修改CONFIG_CMDLINE=""的定义
+修改为CONFIG_CMDLINE="initrd=0x31000000,0x200000 root=/dev/ram rw init=/linuxrc console=ttySAC0 mem=64M"
+保存。
+意思为从ramdisk启动，ramdisk压缩文件起始地址在内存地址0x31000000处，文件大小为0x200000。
+此参数也可以在make menuconfig ARCH=arm时进入Boot options菜单，然后在Default kernel command string里修改。效果是一样的。
+b）：或者不修改.config的的第310行CMDLINE定义,而是用u-boot的bootargs环境变量来传递启动参数。
+同样也是修改该环境变量为bootargs=initrd=0x31000000,0x200000 root=/dev/ram rw init=/linuxrc console=ttySAC0 mem=64M
+并saveenv保存u-boot环境变量
+
+
+make zImage ARCH=arm CROSS_COMPILE=arm-linux-
+mkimage -A arm -O linux -T kernel -C none -a 0x30008000 -e 0x30008000 -n "Linux kernel Image" -d zImage uImage-ramdisk
+
+
+1）创建根文件系统目录：
+#cd转入到你的工作目录。
+#mkdir rootfs
+#cd rootfs
+#mkdir bin dev etc lib proc sbin sys usr mnt tmp var
+#mkdir usr/bin usr/lib usr/sbin lib/modules
+
+2）创建最基本的设备文件：
+#cd dev
+#mknod -m 666 console c 5 1
+#mknod -m 666 null c 1 3
+#cd ..
+
+3）安装/etc配置文件：
+tar etc.tar.gz -C /xxx/rootfs
+
+4) /etc/init.d/rcS文件
+在最下边添加如下两行命令即可自动启动网卡：
+/sbin/ifconfig lo 127.0.0.1
+/sbin/ifconfig eth0 192.168.31.230 netmask 255.255.255.0 up
+
+5）编译内核模块：
+#make modules ARCH=arm CROSS_COMPILE=arm-linux-
+make modules_install ARCH=arm INSTALL_MOD_PATH=/xxx/rootfs
+
+
+6）配置busybox
+进入busybox目录执行#make menuconfig
+　　进入Busybox Settings -> build Options ->选中"Build busybox as a static binary“，即静态链接，免去拷贝大量的库文件。
+　　Installation Options -> 选中"Don't use /usr"，以免busybox不慎被安装到宿主机系统的相应目录下，破坏宿主机系统。
+　　Busybox Installation Prefix （/xxx/rootfs），修改该选项表明编译后的busybox将安装到该位置。
+
+编译、安装busybox
+#make ARCH=arm CROSS_COMPILE=arm-linux-
+几分钟编译完成后
+#make install
+安装到Busybox Installation Prefix （/xxx/rootfs）设定的目录里
+
+7)
+#genext2fs -b 4096 -d rootfs ramdisk
+-b是指制作的ramdisk大小为4096K字节
+-d是指要制作成ramdisk的根文件系统目录
+最后的ramdisk是制作出来的ramdisk的名字，当然可以改名了。
+#gzip -9 -f ramdisk
+
+
+initramfs=============================================================================================================================
+这里只需要配置一个配置项：
+General setup-->选择 Initial RAM filesystem and RAM disk...... 项
+
+
+区别就是需要在General setup-->Initial RAM filesystem and RAM disk...... 项的相关项(/work/rootfs) Initramfs source file(s)中填写你要制作成initramfs格式的根文件系统目录，在这里我要做的根文件系统的目录是/work/rootfs
+
+
+ln -s bin/busybox init 
+
+
+编译可以使用initramfs启动的内核的时候，它的配置选项有一个相关项，就是要在(/work/rootfs) Initramfs source file(s)中填写你要制作成initramfs格式的根文件系统目录。这样就要求我们在编译内核的时候，首先先把根文件系统做好。值得注意的是我们按照这个方法制作出来的内核镜像实际上比原来的大了许多，这是因为我们在做这一步的时候，实际上是将initramfs根文件系统直接合并到内核镜像里边了。这样，合二为一的镜像就不再需要单独烧写根文件系统镜像了，相应的，启动内核时的参数就不需要添加initrd=……来指定initramfs的位置了。当然如果你不想将initramfs合并到内核中，直接用配置ramdisk的内核来启动系统即可，不过这时你就必须使用initrd=……来指定initramfs的位置了，并且第二个参数initramfs根文件系统映像的大小必须指定为实际大小，否则提示映像校验错误，无法启动系统。
+
