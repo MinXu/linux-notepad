@@ -1,0 +1,31 @@
+一、 bootloader传递给内核的关于initrd的参数
+root=
+该参数告诉内核以那个设备作为根文件系统，通常由如下形式：
+root=/dev/ramx
+root=/dev/mtdblockx rw rootfstype = jffs2
+root=31:0x rootfstype = jffs2
+root=/dev/nfs nfsroot=serverip:nfs_dir
+第一种在使用ramdisk和image-initrd的时候是必须的，initramfs和cpio-initdrd因为使用的是系统内一直存在的rootfs，所以该参数可以省略。
+第三、四种基本通用，只是，第四种使用的设备号和分区号来指定，比如root=/dev/mtdblock4 等价于 root=31:04，意思就是使用nand设备上的第四分区来作为根文件系统, 同时用rootfstype指定文件系统类型。
+最后一种就是挂在nfs文件系统了，除了要指定root类型之外，还需要指定服务器上的某个目录来作为挂载的根目录。
+
+initrd=
+应遵循这种格式：initrd = addr, size ，其中addr表示initrd在内存中的位置，size表示initrd的大小。如initrd = 0xa060000,0x2c6b
+另外一种传递该参数的方法就是：使用tag参数来传递，uboot中使用的是函数setup_initrd_tag()函数来生成对应的tag参数。
+需要注意的有两点：
+1. 内核初始化先解析tag中的initrd地址和大小参数，然后再去会去执行cmdline解析initrd=参数，如果这两个地方都指定了话，那么最终取决于cmdline中initrd=所指定的参数，因为这两种方法传递的结果都是被内核初始化阶段的全局变量phys_initrd_start和phys_initrd_size中(这是物理地址)，然后再转换成虚拟地址存储在全局变量initrd_start和initrd_size中，供后续使用。
+2. bootloader传递的大小应该是initrd的实际大小，不能多传更不能少传，否则，gunzip解压缩的时候会出错。
+
+init=
+init指定的是内核启起来后，进入系统中运行的第一个脚本，一般init=/linuxrc(image-initrd使用)和init=/init(initramfs和cpio-initrd使用)。
+ramdisk使用rdinit=/xxx来指定。
+
+小结：( 以下结论均在initrd的地址和大小均通过tag参数传递)
+通过后面的代码分析，可以做如下总结：
+1. 使用initramfs和cpio-initrd
+不需要root=xxx参数，而init=/init是必须的
+2. 使用image-initrd(记得打开内核对ramdisk和initrd的支持)
+init=/initrc，下面是传递不同root=xxx的情况
+a. root=/dev/ramx，将image-initrd作为真实的文件系统在使用
+b. root=/dev/mtdblockx rw rootfstype = jffs2，这样image-initrd只是作为一个中间过渡的文件系统，最终还是需要依靠内核1号线程将真实的文件系统挂上来。
+（b中的root= 只是举个例子，真实系统放在什么设备上没关系，主要的是需要在image-initrd文件系统中将真是文件系统存在的设备的驱动程序加载上就好了）
