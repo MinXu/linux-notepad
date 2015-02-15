@@ -1,0 +1,30 @@
+depmod -a
+       Linux kernel modules can provide services (called "symbols") for other
+       modules to use (using one of the EXPORT_SYMBOL variants in the code).
+       If a second module uses this symbol, that second module clearly depends
+       on the first module. These dependencies can get quite complex.
+
+       depmod creates a list of module dependencies by reading each module
+       under /lib/modules/version and determining what symbols it exports and
+       what symbols it needs. By default, this list is written to modules.dep,
+       and a binary hashed version named modules.dep.bin, in the same
+       directory. If filenames are given on the command line, only those
+       modules are examined (which is rarely useful unless all modules are
+       listed).  depmod also creates a list of symbols provided by modules in
+       the file named modules.symbols and its binary hashed version,
+       modules.symbols.bin. Finally, depmod will output a file named
+       modules.devname if modules supply special device names (devname) that
+       should be populated in /dev on boot (by a utility such as udev).
+
+
+modprobe
+       modprobe intelligently adds or removes a module from the Linux kernel:
+       note that for convenience, there is no difference between _ and - in
+       module names (automatic underscore conversion is performed).  modprobe
+       looks in the module directory /lib/modules/`uname -r` for all the
+       modules and other files, except for the optional configuration files in
+       the /etc/modprobe.d directory (see modprobe.d(5)).  modprobe will also
+       use module options specified on the kernel command line in the form of
+       <module>.<option> and blacklists in the form of
+       modprobe.blacklist=<module>.
+
