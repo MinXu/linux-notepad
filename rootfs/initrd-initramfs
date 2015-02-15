@@ -74,6 +74,7 @@ image-initrd的处理流程
 	loopback::
 		  mount到文件
 		  mount -o loop xxx uuu
+		  losetup [-a/-d]
 
         ramfs/tmpfs(cpio-ramfs):: 
                   not need the file system driver(only in the memory)
@@ -87,7 +88,7 @@ image-initrd的处理流程
 		  ***in the swap or memory
                   limited the mount point max size
 		  ---------> initramfs(a tmpfs exapmle)
-				the initramfs can be built in kernel
+				the initramfs can be built in kernel(make kernel menuconfig --> rootfs source)
 				there is a init in the initramfs
 				run the /init(script) to install the driver and mount the real rootfs
 			
