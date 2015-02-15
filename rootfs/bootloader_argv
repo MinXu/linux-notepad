@@ -25,7 +25,6 @@ ramdisk使用rdinit=/xxx来指定。
 1. 使用initramfs和cpio-initrd
 不需要root=xxx参数，而init=/init是必须的
 2. 使用image-initrd(记得打开内核对ramdisk和initrd的支持)
-init=/initrc，下面是传递不同root=xxx的情况
-a. root=/dev/ramx，将image-initrd作为真实的文件系统在使用
-b. root=/dev/mtdblockx rw rootfstype = jffs2，这样image-initrd只是作为一个中间过渡的文件系统，最终还是需要依靠内核1号线程将真实的文件系统挂上来。
+a. root=/dev/ramx，将image-initrd作为真实的文件系统在使用, 使用/sbin/init-->real rootfs
+b. root=/dev/mtdblockx rw rootfstype = jffs2，这样image-initrd只是作为一个中间过渡的文件系统，最终还是需要依靠内核1号线程将真实的文件系统挂上来, 使用/linuxrc-->real rootfs-->/sbin/init
 （b中的root= 只是举个例子，真实系统放在什么设备上没关系，主要的是需要在image-initrd文件系统中将真是文件系统存在的设备的驱动程序加载上就好了）
