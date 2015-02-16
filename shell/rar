@@ -1,0 +1,26 @@
+rar/unrar
+
+#rar and unrar are programs for manipulation with .rar archives.
+rar a xxx.rar   xxx/
+
+#Extract files to current directory. Does not create any subdirectories.
+rar e xxx.rar
+
+#Extract files with full path.
+rar x xxx.rar
+
+#Delete files from the archive
+rar d xxx.rar   xxx/a.c
+
+#Update files
+rar u xxx.rar   xxx/a.c
+
+#Testing files
+rar t xxx.rar
+
+#List  content of archive [technical]. Files are listed as the 'v' command with the exception of the file path. i.e.the file name is displayed. Optional technical informa‐tion displayed when 't' modifier is used.
+rar l[t] xxx.rar
+
+#Verbosely list archive [technical]
+rar v xxx.rar
+

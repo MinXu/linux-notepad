@@ -1,0 +1,25 @@
+zip/unzip 
+
+#create the zip archive
+zip xxx.zip   xxx/*
+
+#delete the file from the zip archive
+zip -d xxx.zip xxx/a.c
+
+#update or new the file in the zip archive
+zip -u xxx.zip xxx/a.c
+
+#update files, create if necessary
+unzip -u xxx.zip
+
+#test compressed archive data
+unzip -t xxx.zip
+
+#list files (short format)
+unzip -l xxx.zip
+
+#list verbosely/show version info
+unzip -v xxx.zip
+
+extract files into exdir
+unzip  xxx.zip -d xxx/
