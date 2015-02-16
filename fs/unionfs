@@ -1,0 +1,179 @@
+cd linux-3.2.2
+patch -p1 < ../unionfs-2.5.11_for_3.2.2.diff
+
+make menuconfig
+filesystem --> Miscellaneous filesystems，找到unionfs，按“M”（表示把unionfs编译成内核模块）
+
+make
+make install
+
+depmod -a
+modprobe unionfs
+
+
+
+mount -t unionfs -o dirs=/mnt/cdrom1=ro:/mnt/cdrom2=ro unionfs /mnt/union
+
+
+unionctl /mnt/union --list
+#输出:
+#/mnt/cdrom1 (r-)
+#/mnt/cdrom2 (r-)
+
+
+unionctl /mnt/union --add --after /mnt/cdrom2 --mode ro /mnt/cdrom3
+#然后用unionctl --list显示:
+#/mnt/cdrom1 (r-)
+#/mnt/cdrom2 (r-)
+#/mnt/cdrom3 (r-)
+
+
+#当你更改了分支目录, 需强行运行下面命令重新验证联合目录:
+uniondbg -g /mnt/union
+
+
+unionctl /mnt/union --add --before /mnt/cdrom1 --mode rw /mnt/changes
+#所有的修改将位于/mnt/changes, 联合目录如下显示:
+#/mnt/changes (rw)
+#/mnt/cdrom1 (r-)
+#/mnt/cdrom2 (r-)
+#/mnt/cdrom3 (r-)
+
+
+
+================================================================================================================================================================================
+							unionfs 和 aufs
+							http://bbs.konotes.org/thread-3060-1-1.html
+
+Unionfs: 联合文件系统
+是个堆栈式的联合文件系统, 2004年由
+纽约州立大学石溪分校
+开
+发, 他能把多个目录(也叫分支)内容合并在一起, 而目录的物理位置是分开的. Unionfs允许只读和可读写目录并存,
+就是说可同时删除和增加内容. Unionfs应用的地方非常多, 比如在多个磁盘分区上合并不同文件系统的主目录,
+或把几张CD光盘合并成一个统一的光盘目录(归档). 另外,
+具有写时复制(copy-on-write)功能Unionfs能把只读和可读写文件系统合并在一起,
+虚拟上允许只读文件系统的修改能保存到可写文件系统当中.
+SLAX
+是个
+192MB大小的Linux发行版, 目标是为便携设备(如usb闪存或mini-cd)研发一个完整功能的Linux操作系统,
+人们能通过启动光盘(或其他编写媒介)直接使用SLAX Linux. 甚至能在没有硬盘的计算机上运行.
+Unionfs是SLAX系统的一个重要组成部分, 他使SLAX可做为一个真正的Linux系统(具有可写入的根目录树)来运行.
+首先我们来了解unionfs.
+了解unionfs
+如果要运行unionfs, 你需要编译内核原始码来创建一个Linux内核模块. Unionfs支持Linux内核2.4.20/2.6.9及更高的版本. 首先用ftp下载最新的unionfs版本, 然后解压:
+$ tar -xzf unionfs-x-y-z.tar.gz
+接着cd到解压缩后的unionfs目录, 阅读README和INSTALL文件. 为了避免不必要的问题. 编译之前, 建议考虑关闭编译调试信息, 这只对查找漏洞有用, 而且会显著增加内核模块的大小. 关闭调试信息的方法(更改两个参数):
+在源码目录创建一个fistdev.mk文件.
+添加下面文本信息:
+EXTRACFLAGS=-DUNIONFS_NDEBUG
+UNIONFS_DEBUG_CFLAG=
+编译后, 不带调试信息的内核模块大概在90KB左右, 而没有关闭的内核模块为5MB(下载用于编译unionfs模块的
+fistdev.mk
+)
+另外一个非常重要的事项, 为确保编译工作无误, 在下载和解压unionfs源码后你需要修改unionfs的Makefile文件的LINUXSRC变量(参考当前内核), 添加你解开后的unionfs目录路径.(一些情况可自动检测到).
+最后, 使用下面命令编译和安装unionfs模块到/lib/modules/$(KernelVersion)/kernel/fs/unionfs目录:
+$ make
+$ make install
+$ depmod -a
+使用unionfs
+下面例子, 我们合并两个目录的内容到一个目录/mnt/union. 假设所有的目录已存在.
+$ modprobe unionfs
+$ mount -t unionfs -o dirs=/mnt/cdrom1=ro:/mnt/cdrom2=ro unionfs /mnt/union
+目前, 目录/mnt/union包含来自/mnt/cdrom1和/mnt/cdrom2的所有文件和目录, 这些文件目录只读.
+如果cdrom1和cdrom2目录有同样的文件名, cdrom1有更高的优先权(因为mount命令行cdrom1在cdrom2的左面,
+以此来确定优先级).
+使用unionctl
+Unionfs编译过程中创建了Unionctl(同时也创建了uniondbg)工具, 他被安装到/usr/local/sbin目录.
+Unionctl主要用于管理联合目录, 比如显示, 增加, 修改或删除分支目录. 下面是一些简单的例子,
+我们能使用不带所有参数的unionctl命令来查看其他选项.
+列出联合目录中存在的分支:
+$ unionctl /mnt/union --list
+输出:
+/mnt/cdrom1 (r-)
+/mnt/cdrom2 (r-)
+增加另一个目录到当前的联合目录:
+$ unionctl /mnt/union --add --after /mnt/cdrom2 --mode ro /mnt/cdrom3
+然后用unionctl --list显示:
+/mnt/cdrom1 (r-)
+/mnt/cdrom2 (r-)
+/mnt/cdrom3 (r-)
+当你更改了分支目录, 需强行运行下面命令重新验证联合目录:
+uniondbg -g /mnt/union
+写入联合目录
+在非常多情况下, 合并只读目录十分有用. 在一个可读写的分支目录添进来之前, 联合目录自身仍然只读. 这种情况, 所有的修改处于最左边的分支目录(使用向上拷贝copy-up方法, 见下面), 我们能使用下面其中的一个方法来删除文件:
+WHITEOUT模式, 插入文件.wh(whiteout)到一个实际的文件
+DELETE_ALL模式, 从所有分支目录删除一个文件的所有实例.
+缺省使用是WHITEOUT模式. Copy-up(向上拷贝)是个在联合目录中用于处理文件修改的特别方法. 来自ro分支目录的文件不能被修改, 所以需要修改的文件将被拷贝到左上的可读写分支目录. 然后文件被修改的文件位于rw分支目录.
+在联合目录上端增加一个rw分支目录:
+$ unionctl /mnt/union --add --before /mnt/cdrom1 --mode rw /mnt/changes
+所有的修改将位于/mnt/changes, 联合目录如下显示:
+/mnt/changes (rw)
+/mnt/cdrom1 (r-)
+/mnt/cdrom2 (r-)
+/mnt/cdrom3 (r-)
+SLAX - Unionfs的实际应用
+只读媒介中的数据比如CD-ROM是不能被修改的. SLAX, 一个基于CD的Linux发行版, 支持所有目录的数据写入,
+这需要使用特别技术来虚拟修改和保存所有数据更改到内存当中. SLAX非常早就使用了这些特别的技术, 2003年底整合了ovlfs,
+2004年底加入了unionfs. 2005年4月SLAX 5 推出.
+SLAX的原理
+你需要下面三类资源来引导内核:
+1) 内核映像(操作系统本身, 通常是个为vmlinuz的文件)
+2) 分区或映像文件(比如. initrd.gz), 包含了root文件系统和初试化程式(linurc)
+3) 一些Linux加载程式(把内核读到内存并从开始处执行)
+光盘使用isoliux.bin加载程式来引导SLAX系统, 他包含了光盘文件系统的驱动程式, 这样能把光盘上的Linux内核(文件 vmlinuz)和root文件系统映像(文件 initrd.gz)读到内存当中.
+当这些文件被加载到内存, 然后执行, Linux内核在计算机的内存中创建了一个虚拟盘(叫初始ramdisk),
+接着initrd.gz释放到虚拟盘, 然后虚拟盘被加载(mount)为root文件系统. 这里用于SLAX的初始化ramdisk只有4.4M,
+包含了一些用于处理SLAX启动的常用软件和驱动程式. 下面部分非常重要, 请仔细阅读:
+然后由Linux内核来执行/linuxrc文件(位于ramdisk中, 做为初试化程式). Linuxrc的工作非常重要.
+他在/union目录创建了一个空的联合目录, 接着加载tmpfs到/memory目录,
+接着创建/memory/changes/(新目录位于tmpfs, 不在ramdisk中).
+接着Union被加载到/union和/memory/changes目录, 这些新添加的目录被做为rw分支目录.
+然后linuxrc载入所有光盘和磁盘来搜索livecd.sgn文件. 你可能感到惊讶, 不过光盘已被载入到/union/mnt/目录.
+SLAX光盘上所有需要的映像(*.mo)也被载入到了/memory/images/*.mo目录, 通过使用unionctl工具,
+新添加的联合目录将被做为一个独立的只读分支目录在第一个分支目录后(rw 更改). 目录结构如下:
+/(initrd, 4MB)
+|
+|---- /memory(tmpfs, 80% of RAM)
+| |-- images
+| | |-- base.mo mo mo mo -----+ | |
+| |--- xwindow.mo ------+ |
+| +--- kde.mo --------------+
++---- /mnt/live
+当所有模块被添加到联合目录, 一个rw分支目录在联合目录的上端, pivot_root然后被执行. 这是个不错的方法,
+最初的root被移到/mnt/live和/union目录, 成为了一个新的root. 当运行SLAX时候,
+你能通过查看ramdisk上的原始内容来深入了解/mnt/live.
+最后linurc执行/sbin/init, /sbin/init启动系统所有服务和显示登陆信息.
+链接:
+纽约州立大学石溪分校:
+http://www.fsl.cs.sunysb.edu/
+UnionFS:
+http://www.fsl.cs.sunysb.edu/project-unionfs.html
+SLAX:
+http://www.slax.org
+Linux Live 脚本:
+http://www.linux-live.org
+Linux 内核:
+http://www.kernel.org
+参考:
+Unionfs: An Unification File System examples
+
+
+...............................
+
+
+Aufs
+
+Aufs 的全意是 Another Unionfs，它是為了取代Unionfs而產生的檔案系統。有鑑於Unionfs的極度不穩定，且許久不見改進，作者Junjiro Okajima便建立新的專案取代Unionfs，現在已被Slackware的LiveCD所採用。
+
+LiveCD的資料保存和模組化，是 各家開發者急欲解決的問題。自從Unionfs出現之後，提供了一個良好的解決方案，可惜的是，Unionfs一直未能穩定執行，常常導致Kernel Crash。各LiveCD的開發者們，因此紛紛停用或是選擇性的使用Unionfs。一切又回到原點，LiveCD依然無法模組化或是自由的保存資料。
+
+Aufs的出現讓這瓶頸又出現解決的曙光，它良好的穩定性，去除了Unionfs的致命缺點，非常令人期待！
+
+以下是Aufs的原文簡介：
+
+Aufs was entirely re-designed and re-implemented Unionfs. After
+many original ideas, approaches, improvements and implementations, it
+becomes totally different from Unionfs while keeping the basic features.
+Unionfs is being developed by Professor Erez Zadok at Stony Brook
+University and his team. 
