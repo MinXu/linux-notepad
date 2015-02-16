@@ -10,7 +10,7 @@ zip -d xxx.zip xxx/a.c
 zip -u xxx.zip xxx/a.c
 
 #update files, create if necessary
-unzip -u xxx.zip
+unzip -u xxx.zip xxx/a.c
 
 #test compressed archive data
 unzip -t xxx.zip
