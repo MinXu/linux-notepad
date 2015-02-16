@@ -1,4 +1,4 @@
-xz
+xz/unxz
 #force compression, compression preset; default is 6
 xz -z -[0-9] xxx/*
 
