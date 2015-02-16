@@ -1,0 +1,16 @@
+xz
+#force compression, compression preset; default is 6
+xz -z -[0-9] xxx/*
+
+#force decompression
+xz -d xxx/*
+
+#test compressed file integrity
+xz -t xxx/*
+
+#list information about .xz files
+xz -l xxx/*
+
+#be verbose; specify twice for even more verbose
+xz -v xxx/*
+
