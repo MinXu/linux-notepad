@@ -1,0 +1,7 @@
+copy to ~/.profile
+source  ~/.profile
+
+
+export http_proxy="http://HOEM\\MinXu:Flyer1984@10.10.40.10:8080"
+export ftp_proxy="ftp://HOEM\\MinXu:Flyer1984@10.10.40.10:8080"
+export https_proxy="https://HOEM\\MinXu:Flyer1984@10.10.40.10:8080"
