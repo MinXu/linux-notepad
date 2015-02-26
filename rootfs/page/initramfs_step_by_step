@@ -1,0 +1,550 @@
+								精通initramfs构建step by step
+http://linux.chinaunix.net/techdoc/net/2008/12/13/1052467.shtml
+
+来源: ChinaUnix博客 　日期： 2008.12.13 16:15　(共有条评论) 我要评论
+ 
+（一）hello world
+一、initramfs是什么
+在2.6版本的linux内核中，都包含一个压缩过的cpio格式
+的打包文件。当内核启动时，会从这个打包文件中导出文件到内核的rootfs文件系统，然后内核检查rootfs中是否包含有init文件，如果有则执行
+它，作为PID为1的第一个进程。这个init进程负责启动系统后续的工作，包括定位、挂载“真正的”根文件系统设备（如果有的话）。如果内核没有在
+rootfs中找到init文件，则内核会按以前版本的方式定位、挂载根分区，然后执行/sbin/init程序完成系统的后续初始化工作。
+这
+个压缩过的cpio格式的打包文件就是initramfs。编译2.6版本的linux内核时，编译系统总会创建initramfs，然后把它与编译好的
+内核连接在一起。内核源代码树中的usr目录就是专门用于构建内核中的initramfs的，其中的initramfs_data.cpio.gz文件就
+是initramfs。缺省情况下，initramfs是空的，X86架构下的文件大小是134个字节。
+二、构建第一个initramfs：hello world
+从C语言开始，学习计算机编程语言的第一个程序几乎都是hello world，因此我们也构建一个最简单的hello world式的initramfs，以说明initramfs的基本构建方法。
+initramfs的灵魂是init文件（或者叫程序，因为它会被内核第一个执行），我们先写一个简单的init程序，它会在内核的console中打印出经典的hello world信息。
+hello.c：
+#include  
+#include  
+int main(int argc,char argv[])
+{
+printf("hello world, from initramfs.\n");
+sleep(9999999);
+return 0;
+}
+其中的sleep（）函数语句是为了避免执行时内核很快打出panic的信息，并非功能上的需要。
+接着把hello.c编译成静态连接程序：
+#gcc -o hello_static -static -s hello.c
+命令行中的-s参数表示编译后的程序不包含调试定位信息，目的是减少编译出来的程序文件的大小。
+再创建一个initramfs的构建源文件目录image，把hello_static程序拷入这个目录，并改名为init。
+在image目录下，创建一个dev/console的设备文件，否init程序无法在内核console中输出信息：
+#mknod -m 600 dev/console c 5 1
+注意，执行这个命令需要有root权限。
+好了，现在可以设置内核配置参数，进行initramfs的构建了：
+在general
+setup配置目录下的initramfs
+sources配置项下输入image的路径名，比如我的路径就是/home/wyk/initramfs-test/image。因为我们的init程
+序是ELF格式的，所以内核需要支持ELF的可执行文件，否则启动这个init程序会失败。在内核的 Executable file
+#formats配置目录下，选择 kernel support for ELF
+binaries，则可使内核支持ELF格式的可执行文件。其他内核配置参数根据实际需要设置即可，不过，为了减少内核编译时间，可参考这篇文章
+http://linuxman.blog.ccidnet.com/blog-htm-do-showone-uid-60710-type-blog-itemid-293122.html
+设置一个最简单的内核配置。
+内核配置参数设置完成后，按常规的内核编译方法进行编译，initramfs就自动连接到编译好的内核映像文件中了。
+三、试验环境搭建
+试验initramfs需要经常重启系统，所以使用CPU模拟器是不错的选择。我们可以选用qemu，它支持直接启动linux内核，无需在模拟器中安装OS。从方便使用的角度考虑，我们采用qemu launcher设置qemu的各项参数，它的安装可参考
+http://linuxman.blog.ccidnet.com/blog-htm-do-showone-uid-60710-type-blog-itemid-612280.html
+。
+在qemu launcher的linux配置标签中，打勾直接启动linux，然后在下面的文本框中填上刚才编译好的内核映像文件的路径名。因为qemu的运行还需要设置硬盘映像文件，所以还需要在左边的配置标签中新建一个硬盘映像文件，但实际上我们并不使用硬盘。
+配置好qemu的参数后，点击launcher按钮，内核就开始在qemu中运行了。内核输出一堆内核运行信息后，最后打出了
+hello world, from initramfs.
+哈哈，我们构建的initramfs已经能够正常工作了！
+（二）initramfs的前世今生
+四、什么是rootfs和ramfs
+所有的2.6版本linux内核都有一个特殊的文件系统
+rootfs，是内核启动的初始始根文件系统，initramfs的文件会复制到rootfs。如果把initramfs比作种子，那么rootfs就是
+它生长的土壤。大部分linux系统正常运行后都会安装另外的文件系统，然后忽略rootfs。
+rootfs是ramfs文件系统的一个特殊实例。ramfs是一种非常简单的文件系统，是基于内存的文件系统。ramfs文件系统没有容量大小的限制，它可以根据需要动态增加容量。
+ramfs
+直接利用了内核的磁盘高速缓存机制。所有的文件的读写数据都会在内存中做高速缓存（cache），当系统再次使用文件数据时，可以直接从内存中读写，以提
+供系统的I/O性能。高速缓存中的写入数据会在适当的时候回写到对应的文件系统设备（如磁盘等）中，这时它的状态就标识为clean，这样系统在必要时可
+以释放掉这些内存。ramfs没有对应文件系统设备，所以它的数据永远都不会回写回去，也就不会标识为clean，因此系统也永远不会释放ramfs所占
+用的内存。
+因为ramfs直接使用了内核已有的磁盘高速缓存机制，所以它的实现代码非常小。也由于这个原因，ramfs特性不能通过内核配置参数删除，它是内核的天然特性。
+五、ramfs不是ramdisk
+ramdisk
+是在一块内存区域中创建的块设备，用于存放文件系统。ramdisk的容量是固定的，不能象ramfs一样动态增长。ramdisk需要内核的文件系统驱
+动程序（如ext2）来操作其上的数据，而ramfs则是内核的天然特性，无需额外的驱动程序。ramdisk也象其他文件系统设备一样，需要在块设备和
+内存中的磁盘高速缓存之间复制数据，而这种数据复制实际不必要的。
+六、从ramfs派生的文件系统tmpfs
+ramfs
+的一个缺点是它可能不停的动态增长直到耗尽系统的全部内存，所以只有root或授权用户允许使用ramfs。为了解决这个问题，从ramfs派生出了
+tmpfs文件系统，增加了容量大小的限制，而且允许把数据写入交换分区。由于增加了这两个特性，所以tmpfs允许普通用户使用。
+关于tmpfs文件系统更多的信息，可以看内核源码中的 Documentation/filesystems/tmpfs.txt 文档。
+综上所述，initramfs是一种ramfs文件系统，在内核启动完成后把它复制到rootfs中，作为内核初始的根文件系统，它的任务是挂载系统真正的根文件系统。这就是initramfs的前世今生。
+
+（三）：busybox
+七、什么是busybox
+busybox号称是嵌入式Linux中的瑞士军刀——小巧、功能齐
+全。它把许多常用的Linux命令都集成到一个单一的可执行程序中，只用这一个可执行程序（即busybox）加上Linux内核就可以构建一个基本的
+Linux系统。busybox程序非常小巧，包含全部命令可执行文件大小也只有750多K。busybox是完全模块化的，可以很容易地在编译时增加、
+删除其中包含的命令。
+由于busybox的这些特点，它广泛应用于LiveCD、应急修复盘、安装盘等系统中。我们也是以它为基础，构建initramfs。
+八、busybox的配置、编译和安装
+（1）去
+http://busybox.net
+去下载最新的源码，解压展开。
+（2）用
+#make menuconfig
+命令启动配置界面配置，配置busybox的特性、选择要包含在busybox的命令（busybox称为applet）；
+也可以用
+#make defconfig
+命令做缺省配置，包含全部的applet。
+另外两个配置命令是
+#make allyesconfig——最大配置
+#make allnoconfig——最小配置
+它们和make defconfig命令都可以用来作为自定义配置的初始配置，然后再用make menuconfing命令做定制化配置。
+为了简单，我们用make defconfig做缺省配置。
+（3）用
+#make
+命令编译busybox软件。
+（4）用
+#make CONFIG_PREFIX= install
+命令安装。如果在命令行中省略CONFIG_PREFIX变量的赋值，则会安装缺省值 ./_install 目录下。CONFIG_PREFIX可以在make menuconfig的配置界面中修改。
+我们用make CONFIG_PREFIX=~/initramfs-test/image 命令把busybox安装到initramfs的构建目录中。
+#（5）缺省配置下，busybox动态链接到glibc，所以要把它用到的动态库复制到initramfs的构建目录中。用ldd命令查看busybox用到了哪些动态库文件及相应的文件路径，然后把它们复制到相应的目录下即可。
+我们编译的busybox需要向image/lib目录下复制
+ld-linux.so.2
+libc.so.6
+libcrypt.so.1
+libm.so.6
+动态库文件。
+九、在image下创建必要的目录和设备文件
+（1）在imgae目录下创建
+#proc ， sys ， etc ，mnt
+四个目录
+（2）hello world 已经创建了console 设备文件，我们再用
+#mknod -m 600 dev/null c 1 3
+命令创建另一个基本的设备文件。
+十、试验一下
+busybox的构建和准备工作做完了，我们试验一下吧：
+在image目录下以root用户权限——
+（1）用
+#mount -vt proc proc =proc
+#mount -vt sysfs sysfs =sys
+命令安装内核虚拟文件系统
+（2）用
+#mount -v -o bind /dev dev
+命令绑定/dev的设备文件到image/dev
+（3）用
+#chroot . /bin/sh
+命令进入busybox的环境。出现shell的命令提示符，可以试着输入几个命令，看看执行结果。例如，输入 fdisk -l 命令看看是否能显示硬盘的分区。
+
+（四）：mini linux
+十一、自动生成/dev下的设备文件
+上节用chroot方法试验busybox时，为了简单，是用“绑定”的方式把主机的/dev中的设备文件映射到image目录下的dev目录。在initramfs上，这种方法显然不能使用。
+#生成系统的设备文件，现在通常都是用udev动态生成，而initramfs为了做到通用，动态生成的要求是必须的。在busybox中有一个mdev命令，就是用来动态生成设备文件，填充到/dev目录的。在系统启动时，用
+#mdev -s
+命令可以根据内核的sysfs文件系统在/dev目录中自动生成相应的设备文件。命令执行前，需要先挂载内核的proc和sysfs虚拟文件系统。
+十二、初始身手
+解决了自动生成设备文件的问题后，我们可以试着做一个最简单的可运行的linux系统了：
+（1）在image目录下写一个最简单的init脚本。
+#!/bin/sh
+#mount -t proc proc /proc
+#mount -t sysfs sysfs /sys
+#mdev -s
+#/bin/sh
+（2）为init脚本设置可执行权限，否则内核不会去执行它。
+chmod +x init
+（3）有些busybox配置中，mdev命令需要读取/etc/mdev.conf文件，为了避免出错信息，我们创建一个空文件。
+#touch etc/mdev.conf
+（4）在内核源码目录下，执行
+make
+命令，重新编译内核，生成新的initramfs。
+好了，在QEMU模拟环境下启动这个新的内核，系统初始化后，会进入SHELL环境。在这个SHELL环境下，试验一些常用命令，看看是否可以正常运行。
+十三、can't access tty
+上一步创建的简单linux系统在进入SHELL环境时，会打出下面这一句出错信息：
+#/bin/sh: can't access tty; job controll off
+虽然不影响使用，但终究不够完美。
+#产生这个错误的原因是我们的SHELL是直接运行在内核的console上的，而console是不能提供控制终端（terminal）功能的，所以必须把SHELL运行在tty设备上，才能消除这个错误。解决问题的办法是使用正规init机制，在执行SHELL前打开tty设备。
+另外，这个简单系统的reboot、halt等命令是不起作用的，也必须通过init方式解决。
+十四、busybox的缺省init模式
+#busybox支持init功能，当系统没有/etc/inittab文件时，它有一套缺省的模式，按下面配置执行：
+#::sysinit:/etc/init.d/rcS
+#::askfirst:/bin/sh
+#::ctrlaltdel:/sbin/reboot
+#::shutdown:/sbin/swapoff -a
+#::shutdown:/bin/umount -a -r
+#::restart:/sbin/init
+#如果busybox检测到/dev/console不是串口控制台，init还要执行下面的动作：
+#tty2::askfirst:/bin/sh
+#tty3::askfirst:/bin/sh
+#tty4::askfirst:/bin/sh
+我们试试这种模式是否可以解决我们的问题。
+（1）写/etc/init.d/rcS脚本
+这个脚本实际是要执行系统的初始化操作。我们把前面的init脚本改造一下，将最后的/bin/sh命令删除，然后移到 etc/init.d目录下，改名为rcS。
+（2）initramfs不需要linuxrc，而且如果没有init文件，内核就不认为它是一个有效的initramfs，因而不安装它，导致内核panic。于是，我们在image目录下，把busybox安装的linuxrc改名为init
+#mv linuxrc init
+（3）重新编译内核，生成新的initramfs
+（4）用QEMU试验一下新编译的内核。系统启动后，会打出一句话“please press Enter to active this console”——感觉还不错。但是按下回车键后，系统依然会打出错误信息“-/bin/sh:
+can't access tty; job controll off ”。用tty命令看看当前的终端设备文件名：
+# tty
+/dev/console
+它还是console，不是tty设备，所以问题没有解决。不过，reboot和halt命令倒是可以正常工作了。
+经过验证，busybox的缺省init模式无法满足我们的要求，我们还是要写inittab，定制自己的init初始化流程。
+十五、busybox的inittab文件格式说明
+要写自己的inittab，需要理解busybox的inittab文件格式。
+busybox的inittab文件与通常的inittab不同，它没有runlevel的概念，语句功能上也有限制。inittab语句的标准格式是
+:::
+各字段的含义如下
+:
+#id字段与通常的inittab中的含义不同，它代表的是这个语句中process执行所在的tty设备，内容就是/dev目录中tty设备的文件名。由于是运行process的tty设备的文件名，所以也不能象通常的inittab那样要求每条语句id的值唯一。
+:
+#busybox不支持runlevel，所以此字段完全被忽略。
+:
+为下列这些值之一：
+sysinit, respawn, askfirst, wait,once, restart, ctrlaltdel, shutdown
+其
+含义与通常的inittab的定义相同。特别提一下askfirst，它的含义与respawn相同，只是在运行process前，会打出一句话
+“please press Enter to active this console”，然后等用户在终端上敲入回车键后才运行process。
+：
+指定要运行的process的命令行。
+十六、写mini linux的inittab
+理解了busybox的inittab格式，我们就可以写mini linux的inittab：
+#::sysinit:/etc/init.d/rcS
+#tty1::askfirst:/bin/sh
+#tty2::askfirst:/bin/sh
+#tty3::askfirst:/bin/sh
+#tty4::askfirst:/bin/sh
+#tty5::askfirst:/bin/sh
+#tty6::askfirst:/bin/sh
+#::restart:/sbin/init
+#::ctrlaltdel:/sbin/reboot
+#::shutdown:/bin/umount -a -r
+把这个文件放到image的etc目录下。为了执行reboot命令时避免提示找不到/etc/fstab文件，我们再在etc目录下创建一个空文件
+#touch fstab
+做好了这些，就可以重新编译内核，生成新的initramfs了。在QEMU试验环境下验证新生成的mini linux，系统运行正常，而且象通常的linux系统一样，用ALT＋F1～F6键可以在6个终端间切换。
+
+（五）initrd
+十七、配置内核支持initrd
+到目前为止，我们的initramfs都由内核编译系统生成的，并链接到内核中。其实我们也可以用cpio命令生成单独的initramfs，与内核编译脱钩，在内核运行时以initrd的形式加载到内核，以增加灵活性。
+首
+先配置内核使用单独的initrd：在 Device Driver / Block device / 配置目录下，选择 RAM
+filesystem and RAMdisk ( initramfs/initrd ) support 配置项；再到 General
+Setup 配置目录项下，将 initramfs source file(s)
+配置项原有的内容清空。然后把内核源码树的usr目录下已由内核编译生成的initramfs文件initramfs_data.cpio.gz拷贝到
+~/initramfs-test 目录下，我们先直接用这个文件试验一下 initrd
+方式的initramfs的效果。最后，执行make命令重新编译内核后，在QEMU试验环境中，把initrd配置框（linux配置框的下面）的内容
+写为 ~/initramfs-test/initramfs_data.cpio.gz，指定initrd的文件路径。
+好了，试验一下新的initrd方式的initramfs吧，效果跟先前的完全一样。
+十八、用cpio命令生成initramfs
+cpio
+命令有三种操作模式：copy－out、copy－in、copy－pass，生成initramfs用的是它的copy－out模式，即把文件打包的操
+作模式。cpio的copy－out操作模式使用 -o 命令行选项指定。缺省情况下，cpio从标准输入读取输入数据，向标准输出写入输出数据。使用
+#-I 选项可以指定文件名代替标准输入，使用 -O 选项可以指定文件名代替标准输出，而 -F选项指定的文件名则根据cpio操作模式的不同可代替标准输入或标准输出。
+把~/initramfs-test/image目录下的文件打包成initramfs，执行下面的命令：
+#find . | cpio -o -H newc | gzip > ../image.cpio.gz
+命令执行完毕后，在~/initramfs-test目录下就会生成文件名为imgae.cpio.gz的initramfs。上面cpio命令的 -H 选项指定打包文件的具体格式，要生成initramfs，只能用newc格式，如果使用其他格式，内核会打出这样的出错信息：Unpacking initramfs... kernel panic -not syncing: no cpio magic
+在QEMU试验环境下试验一下新的initrd方式的initramfs，效果跟先前的完全一样。
+十九、cpio命令的其他用法
+如果我们要解开一个cpio格式的打包文件，则要使用cpio命令的copy－in操作模式。cpio的copy－out操作模式使用 -i
+命令行选项指定。例如，我们想把前一步从内核源码树 usr目录下拷贝的initramfs_data.cpio.gz
+展开到~/initramfs-test/initramfs_data目录下，则使用下列命令：
+mkdir ~/initramfs-test/initramfs_data
+cd ~/initramfs-test/initramfs_data
+#cpio -i -F ../initramfs_data.cpio.gz --no-absolute-filename
+命令执行完毕后，initramfs_data目录下出现多个目录和文件，用diff命令比较initramfs_data与image目录，两者的完全一样。
+上面cpio命令的
+#--no-absolute-filename
+选项的作用是展开文件时，去掉文件路径最前面的"/"，把绝对路径名变为相对路径名。内核编译时生成的initramfs使用了绝对路径名，所以这个选项
+必须使用，否则initramfs内文件展开到"/"目录去了，如果你是root用户或有"/"目录的写权限，那么展开的文件就有可能覆盖同名的文件（在
+文件修改时间新于原有文件），那就糟糕了！
+#展开文件前，你可能会想先看看打包文件里都有哪些文件，这时就要用 -t 选项了。例如，我们想看看内核编译时生成的initramfs_data.cpio.gz中都有哪些文件，我们就可以用下面的命令：
+#zcat initramfs_data.cpio.gz | cpio -t
+在标准输出中打出文件名列表。
+#使用 -v 选项可以在cpio命令执行时输出详细信息：在打包或展开文件时，输出已处理的文件名；与 -t 选项连用时，则显示文件的详细信息，类似 ls -l 的输出内容。-V 选项则用打点的方式，显示cpio命令的执行进度信息，一个点代表处理一个文件。
+（六）switch_root
+二十、switch_root 命令
+除了基于initramfs的系统（如第四节的minilinux），通常initramfs都是为安装最终的根文件系统做准备工作，它的最后一步需要安装最终的根文件系统，然后切换到新根文件系统上去。以往的基于ramdisk 的initrd
+使用pivot_root命令切换到新的根文件系统，然后卸载ramdisk。但是initramfs是rootfs，而rootfs既不能pivot_root，也不能umount。为了从initramfs中切换到新根文件系统，需要作如下处理：
+（1）删除rootfs的全部内容，释放空间
+find -xdev / -exec rm '{}' ';'
+（2）安装新的根文件系统，并切换
+cd /newmount; mount --move . /; chroot .
+（3）把stdin/stdout/stderr 附加到新的/dev/console，然后执行新文件系统的init程序
+上述步骤比较麻烦，而且要解决一个重要的问题：第一步删除rootfs的所有内容也删除了所有的命令，那么后续如何再使用这些命令完成其他步骤？busybox的解决方案是，提供了switch_root命令，完成全部的处理过程，使用起来非常方便。
+switch_root命令的格式是：
+#switch_root [-c /dev/console] NEW_ROOT NEW_INIT [ARGUMENTS_TO_INIT]
+其中NEW_ROOT是实际的根文件系统的挂载目录，执行switch_root命令前需要挂载到系统中；NEW_INIT是实际根文件系统的init程序的路径，一般是/sbin/init；-c /dev/console是可选参数，用于重定向实际的根文件系统的设备文件，一般情况我们不会使用；而ARGUMENTS_TO_INIT则是传递给实际的根文件系统的init程序的参数，也是可选的。
+
+#需要特别注意的是：switch_root命令必须由PID=1的进程调用，也就是必须由initramfs的init程序直接调用，不能由init派生的其他进程调用，否则会出错，提示：
+switch_root: not rootfs
+#也是同样的原因，init脚本调用switch_root命令必须用exec命令调用，否则也会出错，提示：
+switch_root: not rootfs
+二十一、实践：用initramfs安装CLFS根文件系统
+现在实践一下switch_root命令，用它切换一个CLFS的根文件系统硬盘分区。我的CLFS安装在/dev/sda8硬盘分区，我们就以此为例说明。
+我们还是在以前的image目录中构建
+（1）改写init脚本
+#!/bin/sh
+#mount -t proc proc /proc
+#mount -t sysfs sysfs /sys
+#mdev -s
+#mount /dev/sda8 /mnt （注意：为了简单，我们直接把CLFS分区写死在init脚本中了）
+#exec switch_root /mnt /sbin/init
+（2）生成新的initrd 按上一节“精通initramfs构建step by step （五）：initrd”描述的cpio命令生成新的initrd。
+（3）把新的initrd拷贝到CLFS分区的/boot目录下，改名为clfs-initrd
+（4）在GRUB的menu.lst配置文件中增加一个启动项
+#test for initramfs of CLFS
+title test for initramfs of CLFS (on /dev/sda8)
+root (hd0,7)
+kernel /boot/clfskernel-2.6.17.13 （注意：并没有向内核传递root参数信息）
+initrd /boot/clfs-initrd
+全部做完后，重启机器，选择 test for initramfs of CLFS 启动项，机器顺利进入了CLFS系统，我们构建的initramfs用switch_root命令完成了CLFS实际根文件系统的安装和切换。
+
+（七）modules
+二十二、内核模块支持
+到目前为止，我们在构建initramfs时还没有涉及内核模块的支持，所用到的硬件驱动程序都是直接编译到内核中。现在我们就看看如何使initramfs支持内核模块。
+首先，内核配置要支持模块，并支持内核模块的自动加载功能：在内核配置菜单中的激活下面的配置项，编译进内核 Load module support
+#/ Enable loadable module support / Automatic kernel loading ；
+然后把需要的硬件驱动程序配置模块形式，比如把我的机器上的硬盘控制器的驱动编译成模块，则选择
+Device Driver
+|---->SCSI device support
+|---->SCSI disk support
+|----->verbose SCSI error reporting (不是必须的，但可方便问题定位)
+|----->SCSI low-level drivers
+|---->Serial ATA (SATA) support
+|---->intel PIIX/ICH SATA support
+把它们配置成模块。
+最后，编译内核，并把编译好的内核模块安装到image的目录下：
+make
+#make INSTALL_MOD_PATH=~/initramfs-test/image modules_install
+命令执行完毕后，在image/lib/modules/2.6.17.13/kernel/drivers/scsi目录下安装了4个内核模文件：scsi_mod.ko、sd_mod.ko、ata_piix.ko、libata.ko，它们就是所需的硬盘控制器的驱动程序。
+好了，都准备好了，可以用cpio命令生成inintramfs了。不过，为了方便后面的试验，我们再把init脚本改成
+#!/bin/sh
+#mount -t proc proc /proc
+#mount -t sysfs sysfs /sys
+#mdev -s
+#exec /bin/sh
+使系统启动后进入shell环境，并且用exec调用的方式，使shell的pid为1，能够执行switch_root命令。
+二十三、试验：用initramfs中的内核模块安装硬盘文件系统
+用
+新生成的initramfs启动系统，内核并没有自动加载硬盘控制器的驱动程序，所以
+/dev目录下也没有sda等硬盘设备文件。好吧，我们自己加载内核模块文件。不幸的是，busybox的modprobe命令执行不正常，不能加载内核
+模块。怀疑是busybox的modprobe命令配置或编译有问题，后续再花时间定位吧，先用insmod命令依次加载。查看/lib/modules
+/2.6.17.13/modules.dep，弄清楚了4个模块的依赖关系，执行下面的命令加载：
+#insmod scsi_mod
+#insmod libata
+#insmod ata_piix
+#insmod sd_mod
+然后再用
+#mdev -s
+命令生成硬盘的设备文件。
+好了，可以安装CLFS的硬盘分区，并把根文件系统切换到CLFS的硬盘分区：
+#mount /dev/sda8 /mnt
+#exec switch_root /mnt /sbin/init
+系统正常启动到了CLFS，我们可以做到用initramfs中的硬盘控制器的驱动模块安装硬盘分区了。
+二十四、mdev的hotplug模式
+上面的试验中，我们在加载完驱动模块后调用了mdev -s 命令来生成硬盘的设备文件。其实，可以使用mdev的hotplug模式在加载内核时自动生成对应的设备文件：
+在执行insmod命令前，用
+#echo /sbin/mdev > /proc/sys/kernel/hotplug
+命令设置系统的hotplug程序为mdev。
+后续使用insmod命令加载模块时，系统自动调用mdev生成相应的设备文件。
+注意：内核必须配置支持hotplug功能，而前面提到的CLFS最简内核配置方案是没有配置hotplug支持的。
+（八）coldplug
+二十五、udev的coldplug模式
+内核在启动时已经检测到了系统的硬件设备，并把硬件设备
+信息通过sysfs内核虚拟文件系统导出。udev扫描sysfs文件系统，根据硬件设备信息生成热插拔（hotplug）事件，udev再读取这些事
+件，生成对应的硬件设备文件。由于没有实际的硬件插拔动作，所以这一过程被称为coldplug。我们的initramfs就是利用这一机制，加载硬件设
+备的驱动程序模块。
+udev完成coldplug操作，需要下面三个程序：
+#udevd——作为deamon，记录hotplug事件，然后排队后再发送给udev，避免事件冲突（race conditions）。
+#udevtrigger——扫描sysfs文件系统，生成相应的硬件设备hotplug事件。
+#udevsettle——查看udev事件队列，等队列内事件全部处理完毕才退出。
+在initramfs的init脚本中可以执行下面的语句实现coldplug功能：
+#mkdir -p /dev/.udev/db
+#udevd --daemon
+#mkdir -p /dev/.udev/queue
+#udevtrigger
+#udevsettle
+许多文档提到的在udevd --daemon 命令前要执行
+echo > /proc/sys/kernel/hotplug
+命令，经验证，在我们的initramfs环境下的coldplug功能中并不需要。
+二十六、试验：用udev自动加载设备驱动模块
+了解了udev的coldplug的机理，我们就试验一下用udev自动加载设备驱动模块，并生成硬件设备文件。
+（1）从 /sbin 目录下拷贝udevd、udevtrigger、udevsettle程序到image目录下的sbin目录下，并用ldd命令找到它们所需要的动态库文件，拷贝到image目录下的lib目录下。
+（2）修改init脚本，增加coldplug功能：
+#!/bin/sh
+#mount -t proc proc /proc
+#mount -t sysfs sysfs /sys
+#mdev -s
+#using udev autoload hard disk driver module
+#mkdir -p /dev/.udev/db
+#udevd --daemon
+#mkdir -p /dev/.udev/queue
+#udevtrigger
+#udevsettle
+#mount /dev/sda8 /mnt
+#killall udevd
+#exec switch_root /mnt /sbin/init
+#注意：在切换到真正根文件系统前，要把udevd进程杀掉，否则会和真正根文件系统中的udev脚本的执行相冲突。这就是上面killall udevd 语句的作用。
+（3）编写udev规则文件
+规
+则文件是udev的灵魂，没有规则文件，udev无法自动加载硬件设备的驱动模块。为了简单，我们直接使用CLFS中的40-
+#modprobe.rules，把它拷贝到image目录下的etc/udev/rules.d目录。有关udev的规则文件编写，已超出了本文的范围，
+后续我有可能专文描述。
+########################################################################
+#
+# Description : 40-modprobe.rules
+#
+# Authors : Based on Open Suse Udev Rules
+#
+kay.sievers@suse.de
+
+#
+# Adapted to : Jim Gifford
+# LFS : Alexander E. Patrakov
+#
+# Version : 00.01
+#
+# Notes :
+#
+########################################################################
+# hotplug
+ENV{MODALIAS}=="?*", RUN+="/sbin/modprobe $env{MODALIAS}"
+# scsi
+SUBSYSTEM=="scsi_device", ACTION=="add", SYSFS{device/type}=="0|7|14", RUN+="/sbin/modprobe sd_mod"
+SUBSYSTEM=="scsi_device",
+ACTION=="add", SYSFS{device/type}=="1",
+SYSFS{device/vendor}=="On[sS]tream", RUN+="/sbin/modprobe osst"
+SUBSYSTEM=="scsi_device", ACTION=="add", SYSFS{device/type}=="1", RUN+="/sbin/modprobe st"
+SUBSYSTEM=="scsi_device", ACTION=="add", SYSFS{device/type}=="[45]", RUN+="/sbin/modprobe sr_mod"
+SUBSYSTEM=="scsi_device", ACTION=="add", RUN+="/sbin/modprobe sg"
+# floppy
+KERNEL=="nvram", ACTION=="add", RUN+="load_floppy_module.sh"
+注意：上面的
+ENV{MODALIAS}=="?*", RUN+="/sbin/modprobe $env{MODALIAS}"
+语句是实现自动加载硬件设备驱动模块功能的关键，它根据sysfs文件系统中记录的模块aliases数据，用modprobe命令加载对应的内核模块。有
+关模块aliases的进一步说明，可参考CLFS手册（CLFS-1.0.0-x86）中的11.5.2.4. Module
+Loading一节的描述。
+（4）拷贝modprobe命令
+前一节提到过，busybox的modprobe
+#命令不能正常使用，所以我们需要拷贝 /sbin目录下的modprobe命令到image目录下的sbin目录，供udev加载内核模块使用。再用ldd命令检查一下 /sbin/modprobe
+命令所需的动态库文件，如果有则拷贝到image/lib目录下。（我的检查结果是，除了libc6外，不需要其他动态库，所以不需要拷贝）
+好了，重新生成initramfs，启动CLFS系统，initramfs能够自动加载硬盘设备的驱动模块，系统顺利地从initramfs切换到了真正的CLFS的根文件系统。
+
+（九）内核编译时构建initramfs补遗
+二十七、直接把cpio打包文件编译进内核
+如果我们有一个已经做好的cpio格式的initramfs，可以在内核编译时直接编译进内核。回忆一下
+第一节的内容，我们在内核配置参数中的initramfs sources配置项下输入构建initramfs的目录路径。其实我们也可以直接输出现成的initramfs的文件名，这样在内核编译时，就可以把它编译进内核了。
+使用这种方法，有两点需要注意：
+（1）cpio文件不能压缩。一般作为initrd的cpio文件都经过了压缩，所以编译前需要先把压缩过的文件解压。
+（2）cpio文件的后缀名必须是 .cpio。内核编译通过 .cpio的后缀名来识别此文件是cpio打包文件，而其他文件后缀名则会被认为是initramfs构建的描述文件（关于描述文件，下面后详细说明）。
+二十八、用描述文件构建initramfs
+用内核编译工具构建initramfs的第三种方法是使用描述文件。在内核配置参数中的initramfs sources配置项下可以输入initramfs构建描述文件的文件名，内核编译工具根据描述文件完成initramfs的构建。
+描述文件的语法格式的说明如下：
+# a comment
+file      
+dir     
+nod        
+slink      
+pipe     
+sock   
+name of the file/dir/nod/etc in the archive
+location of the file in the current filesystem
+link target
+mode/permissions of the file
+user id (0=root)
+group id (0=root)
+device type (b=block, c=character)
+major number of nod
+minor number of nod
+例子：
+我们用描述文件的方式，构建第一节中的hello world的initramfs。
+hello-init.desp:
+dir /dev 0755 0 0
+nod /dev/console 0600 0 0 c 5 1
+file /init /home/wyk/initramfs-test/hello_static 0755 0 0
+在内核配置项initramfs sources中指定描述文件hello-init.desp，编译内核时就会生成hello world的initramfs，运行效果与第一节用指定构建目录的方法构建的initramfs的完全相同。
+注意：在
+内核帮助文件中，提到initramfs
+sources配置项可以指定多个目录或描述文件，内核会汇集这些目录或文件生成一个initramfs。但从我的试验来看，initramfs
+sources只接受单一的目录名或文件名，输出多个目录名或文件名（之间用空格分隔），内核编译时就会出错。也许是我的方法有误，还望读者指正。
+
+（十）uclibc
+二十九、toolchain
+在initramfs中使用uclibc库，关键是构建uclibc的工具链toolchain。构建uclibc 的 toolchain 有两种主要方式：（1）用buildroot工具（
+http://buildroot.uclibc.org/
+）自动构建，这也是uclibc的官方标准做法。（2）用CLFS Embedded手册的方法手工创建。目前CLFS Embedded还在开发中，可在
+http://cross-lfs.org/view/clfs-embedded/x86/
+中查阅。
+我们简单地说明用buildroot工具构建uclbic的toolchain的步骤：
+（1）获取buildroot。
+推荐用svn命令从它的版本库中下载：
+#svn co svn://uclibc.org/trunk/buildroot
+要求使用svn命令，需要先安装subversion软件包。下载过程中，可能会出现连接异常中断的情况，这时重新执行上述命令，继续进行下载，有可能要重复多次。
+（2）配置buildroot
+因为我们只是创建toolchain，所以需要做相应的配置。在buildroot的顶层目录下，执行
+#make menuconfig
+命令，在缺省配置的基础上做如下配置
+#Target Architecture: i386
+#Target Architecture Variant: i686
+#Package Selection for the target: 取消BusyBox的选项（缺省是选中的）
+#Target filesystem options: 取消 ext2 root filesystem（缺省是选中的）
+#Toolchain --> Toolchain type: Buildroot toolchain
+（3）编译
+执行
+#make
+命令，buildroot工具会自动下载所需要的源文件并自动编译，等一两个小时后，toolchain就编译好了。编译好的toolchain位于
+buildroot/build_i686/staging_dir/usr/bin/
+目录下。工具命令的前缀是 i686-linux- 。
+三十、编译Busybox静态连接uclibc库
+一般而言，使用uclibc库是为了把它静态连接到busybox中。具体步骤是：
+（1）把uclibc toolchain的目录添加到PATH中。
+在~/.bash_profile文件中添加：
+#set PATH so it includes uclibc toolchain if it exist
+if [ -d ~/buildroot/build_i686/staging_dir/usr/bin ] ; then
+PATH="${PATH}":~/buildroot/build_i686/staging_dir/usr/bin
+fi
+（2）配置busybox静态连接库。
+在busybox的配置界面中，选择：
+#Build Options --> Build BusyBox as a static binary (no shared libs)
+（3）编译
+执行
+make CROSS_COMPILE=i686-linux-
+命令“交叉编译”busybox。
+最后编译生成的是静态连接的可执行文件，不需要在initramfs中拷贝库文件。
+三十一、用buildroot自动构建initramfs
+buildroot工具实际是一个功能强大的根文件系统构建工具，它以uclibc和busybox作为系统构建的基础，toolchain只是它构建系统的中间产品。
+initramfs是一种特殊的根文件系统，当然也可以用buildroot工具自动构建，下面是构建方法的简要描述：
+（1）配置
+在buildroot的配置界面下做如下的配置：
+Package Selection for the target: 选择
+#Busybox
+#Run Busybox's own full installation
+#Use minimal target skeleton
+#Target filesystem options --> cpio the root filesystem --> comprassion method: gzip
+（2）编译
+执行
+#make
+命令，进行编译。
+（3）输出
+构建好的cpio文件是
+buildroot/binaries/rootfs.i686.cpio.gz
+同一目录下还包含一个未压缩的文件：rootfs.i686.cpio
+构建目录则是
+buildroot/project_build_i686/uclibc/root
+可以在这个目录下对原始的initramfs进行修改调整，然后自己用cpio命令打包生成新的initramfs。
+（4）调整
+直接用buildroot生成的root.i686.cpio.gz作为initramfs，运行时会出现
+can't open /dev/tty1: No such file or directory
+can't open /dev/tty2: No such file or directory
+can't open /dev/tty3: No such file or directory
+#错误信息的循环输出，系统不能正常运行。
+错误的原因是没有在initramfs的/dev目录下生成相应的设备文件。需要做如下的调整：
+1）在构建目录（buildroot/project_build_i686/uclibc/root）下的etc/init.d目录中新增一个初始化脚本文件S10mountfs
+#!/bin/sh
+#mount -t proc proc /proc
+#mount -t sysfs sysfs /sys
+#mdev -s
+2）更改busybox的setuid属性，否则无法执行mount命令。在构建目录（buildroot/project_build_i686/uclibc/root）下执行
+#chmod -s bin/busybox
+命令。
+这两项调整工作做完后，在构建目录（buildroot/project_build_i686/uclibc/root）下执行
+#find . | cpio -o -H newc |gzip > ../initramfs.cpio.gz
+命令，重新生成initramfs的cpio打包文件。
+（5）运行效果
+运行新的initramfs，系统出现登录提示。输入用户名 root，密码为空，即可进入一个mini的linux系统。
+buildroot是功能强大、配置灵活的自动化构建工具，它的详细使用和配置方法超出了本文的范围，后续可能会专文描述，此处就从略了。
+
