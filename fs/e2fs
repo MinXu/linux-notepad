@@ -1,3 +1,11 @@
+genext2fs -b 4096 -d rootfs ramdisk
+-b是指制作的ramdisk大小为4096K字节
+-d是指要制作成ramdisk的根文件系统目录
+最后的ramdisk是制作出来的ramdisk的名字，当然可以改名了。
+
+=============================================================================
+
+
 #create the file it is 1M(here it is)
 dd if=/dev/zero bs=1024 count=1024 of=/path/image
 
