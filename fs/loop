@@ -23,4 +23,4 @@ losetup -d /dev/loop0
 
 
 # mount the iso 
-mount -t iso9660 -t loop xxx.iso /mnt
+mount -t iso9660 -o loop xxx.iso /mnt
