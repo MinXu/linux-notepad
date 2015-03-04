@@ -174,7 +174,8 @@ mkinitrd /boot/initrd.img $(uname -r)
 	2. size is unlimited
 	3. PID 1 process is /init
 	4. if /init is a script, need the /lib(/lib64)
-	5. sudo qemu-system-x86_64 -kernel /home/xumin/WorkDisk/WorkSpace/tcp-acceleration/tcp_source/linux-source-3.8.0/arch/x86_64/boot/bzImage -initrd ./hello2-initrd  -append root=/dev/ram0
+	5. sudo qemu-system-x86_64 -kernel /home/xumin/WorkDisk/WorkSpace/tcp-acceleration/tcp_source/linux-source-3.8.0/arch/x86_64/boot/bzImage -initrd ./hello2-initrd  -hda /dev/zero
+
 
 #ramdisk:
 	1. running the /sbin/init --------> /etc/rcS
