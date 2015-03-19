@@ -1,0 +1,1 @@
+find . -name rx  -not -iwholename '*bi*'
