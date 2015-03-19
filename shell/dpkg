@@ -29,14 +29,15 @@ dpkg -l <package>
 
 dpkg -S <file>
 #display which package used the file
+
 ====================================================================================================================================================
 dpkg-reconfigure <package>
 #重新配制一个已经安装的包裹，如果它使用的是 debconf (debconf 为包裹安装提供了一个统一的配制界面)。你能够重新配制 debconf 它本身，如你想改变它的前端或提问的优先权。例如，重新配制 debconf，使用一个 dialog 前端，简单运行：
-
 dpkg-reconfigure --frontend=dialog debconf (如果你安装时选错了，这里可以改回来哟：)
 
+debconf --set-selections*********
  
-
+====================================================================================================================================================
 echo “<package> hold” | dpkg –set-selections
 #设置 <package> 的状态为 hlod (命令行方式)
 
