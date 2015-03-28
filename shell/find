@@ -1,1 +1,2 @@
 find . -name rx  -not -iwholename '*bi*'
+find . -name tr -exec ls  '{}' \;
