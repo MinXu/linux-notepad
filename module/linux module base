@@ -1,0 +1,121 @@
+/*Linux内核模块的概念和基本的编程方法 */
+//http://blog.csdn.net/bugouyonggan/article/details/9097201
+=============================================================================================================
+
+#include <linux/init.h>
+#include <linux/module.h>
+
+//LICENSE包括“GPL”、“GPL v2”、“GPL and additional rights”、“Dual BSD/GPL”、“Dual MPL/GPL”和“Proprietary”。
+MODULE_LICENSE("Dual BSD/GPL");
+
+static char *book_name = "深入浅出Linux设备驱动";
+static int num = 4000;
+module_param(num, int, S_IRUGO);
+module_param(book_name, charp, S_IRUGO);
+
+
+static struct usb_device_id skel_table [] = { 
+{ 
+   USB_DEVICE(USB_SKEL_VENDOR_ID, 
+   USB_SKEL_PRODUCT_ID) }, 
+   { } /* 表结束 */ 
+}; 
+
+
+
+
+static int hello_init(void)
+{
+  printk(KERN_INFO " Hello World enter\n");
+  return 0;
+}
+static void hello_exit(void)
+{
+  printk(KERN_INFO " Hello World exit\n ");
+}
+module_init(hello_init);
+module_exit(hello_exit);
+
+MODULE_AUTHOR("author");
+MODULE_DESCRIPTION("description");
+MODULE_VERSION("version_string");
+// MODULE_DEVICE_TABLE("table_info");
+MODULE_DEVICE_TABLE (usb, skel_table);
+MODULE_ALIAS("alternate_name");
+
+=============================================================================================================
+Makefile:
+obj-m := modulename.o
+modulename-objs := file1.o file2.o
+make -C /usr/src/linux-2.6.15.5/ M=/driver_study/ modules
+
+=============================================================================================================
+所有标识为__init的函数在连接的时候都放在.init.text这个区段内，
+此外，所有的__init函数在区段.initcall.init中还保存了一份函数指针，
+在初始化时内核会通过这些函数指针调用这些__init函数，并在初始化完成后，
+释放init区段（包括.init.text，.initcall.init等）。
+
+和__init一样，__exit也可以使对应函数在运行完成后自动回收内存。实际上，__init和__exit都是宏，其定义分别为：
+#define __init        __attribute__ ((__section__ (".init.text")))
+和
+#ifdef MODULE
+#define __exit        __attribute__ ((__section__(".exit.text")))
+#else
+#define __exit        __attribute_used__ __attribute__ ((__section__(".exit.text")))
+#endif
+数据也可以被定义为__initdata和__exitdata，这两个宏分别为：
+#define __initdata   __attribute__ ((__section__ (".init.data")))
+和
+#define __exitdata  __attribute__ ((__section__(".exit.data")))
+
+
+=============================================================================================================
+在Linux 2.6内核中，可以使用request_module(const char *fmt, …)函数加载内核模块，驱动开发人员可以通过调用
+request_module(module_name); 
+或
+request_module("char-major-%d-%d", MAJOR(dev), MINOR(dev));
+
+#define request_module(mod...) __request_module(true, mod)
+#define request_module_nowait(mod...) __request_module(false, mod) 	
+
+我们也可以向/proc/sys/kernel/modprobe添加新的modprobe应用程序路径,这里的/sbin/modprobe是内核默认路径
+cat /proc/sys/kernel/modprobe                //request_module call the modprobe command in user space
+       /sbin/modprobe
+=============================================================================================================
+lsmod =====>>cat /proc/modules 
+cat /sys/module/***/refcnt
+		   /sections
+		   /paramters*
+/proc/kallsyms    :对应着内核符号表，它记录了符号以及符号所在的内存地址
+
+depmod -b path -e -F version -a -A
+modprobe          :在加载某模块时，会同时加载该模块所依赖的其它模块
+modprobe          :加载的模块若以“modprobe -r filename”的方式卸载将同时卸载其依赖的模块。
+modinfo <模块名>  :可以获得模块的信息，包括模块作者、模块的说明、模块所支持的参数以及vermagic
+============================================================================================================
+module_param(参数名,参数类型,参数读/写权限),               insmode（或modprobe）模块名 参数名=参数值
+module_param_array(数组名,数组类型,数组长,参数读/写权限), 　insmod或modprobe命令时，应使用逗号分隔输入的数组元素。
+
+·  模块参数（可选）
+模块参数是模块被加载的时候可以被传递给它的值，它本身对应模块内部的全局变量。
+参数类型可以是: byte、short、ushort、int、uint、long、ulong、charp（字符指针）、bool 或invbool（布尔的反），　数组元素
+
+============================================================================================================
+EXPORT_SYMBOL(符号名);
+EXPORT_SYMBOL_GPL(符号名);
+·  模块导出符号（可选）
+内核模块可以导出符号（symbol，对应于函数或变量），这样其它模块可以使用本模块中的变量或函数。
+
+============================================================================================================
+int try_module_get(struct module *module);
+该函数用于增加模块使用计数；若返回为0，表示调用失败，希望使用的模块没有被加载或正在被卸载中。
+void module_put(struct module *module);
+该函数用于减少模块使用计数。
+try_module_get ()与module_put()的引入与使用与2.6内核下的设备模型密切相关。Linux 2.6内核为不同类型的设备定义了struct module *owner域，用来指向管理此设备的模块。当开始使用某个设备时，内核使用try_module_get(dev->owner)去增加管理此设备的owner模块的使用计数；当不再使用此设备时，内核使用module_put(dev->owner)减少对管理此设备的owner模块的使用计数。这样，当设备在使用时，管理此设备的模块将不能被卸载。只有当设备不再被使用时，模块才允许被卸载。
+在Linux 2.6内核下，对于设备驱动工程师而言，很少需要亲自调用try_module_get()与module_put()，因为此时开发人员所写的驱动通常为支持某具体设备的owner模块，对此设备owner模块的计数管理由内核里更底层的代码如总线驱动或是此类设备共用的核心模块来实现，从而简化了设备驱动开发。
+
+============================================================================================================
+MODULE_DEVICE_TABLE (usb, skel_table);
+该宏生成一个名为__mod_pci_device_table的局部变量，该变量指向第二个参数。内核构建时，depmod程序会在所有模块中搜索符号__mod_pci_device_table，把数据（设备列表）从模块中抽出，添加到映射文件/lib/modules/KERNEL_VERSION/modules.pcimap中，当depmod结束之后，所有的PCI设备连同他们的模块名字都被该文件列出。当内核告知热插拔系统一个新的PCI设备被发现时，热插拔系统使用modules.pcimap文件来找寻恰当的驱动程序。 
+
+MODULE_DEVICE_TABLE的第一个参数是设备的类型，如果是USB设备，那自然是usb（如果是PCI设备，那将是pci，这两个子系统用同一个宏来注册所支持的设备）。后面一个参数是设备表，这个设备表的最后一个元素是空的，用于标识结束。例：假如代码定义了USB_SKEL_VENDOR_ID是 0xfff0，USB_SKEL_PRODUCT_ID是0xfff0，也就是说，当有一个设备接到集线器时，usb子系统就会检查这个设备的 vendor ID和product ID，如果他们的值是0xfff0时，那么子系统就会调用这个模块作为设备的驱动。
