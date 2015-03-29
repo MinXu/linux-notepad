@@ -49,8 +49,12 @@ MODULE_ALIAS("alternate_name");
 Makefile:
 obj-m := modulename.o
 modulename-objs := file1.o file2.o
-all:
-	make -C /usr/src/linux-2.6.15.5/ M=/driver_study/ modules
+
+all :
+    $(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+
+clean:
+    $(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 
 
 我們首先到目前的核心原始碼所在目錄下達 make menuconfig ， 
