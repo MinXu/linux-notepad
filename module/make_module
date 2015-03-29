@@ -1,2 +1,2 @@
 make module
-make modules_install INSTALL_MOD_PATH
+make modules_install INSTALL_MOD_PATH=xxxx
