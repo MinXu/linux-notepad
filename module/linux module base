@@ -1,5 +1,7 @@
 /*Linux内核模块的概念和基本的编程方法 */
 //http://blog.csdn.net/bugouyonggan/article/details/9097201
+/*浅谈linux中的模块加载*/
+//http://blog.chinaunix.net/uid-20568790-id-1632313.html
 =============================================================================================================
 
 #include <linux/init.h>
@@ -47,8 +49,54 @@ MODULE_ALIAS("alternate_name");
 Makefile:
 obj-m := modulename.o
 modulename-objs := file1.o file2.o
-make -C /usr/src/linux-2.6.15.5/ M=/driver_study/ modules
+all:
+	make -C /usr/src/linux-2.6.15.5/ M=/driver_study/ modules
 
+
+我們首先到目前的核心原始碼所在目錄下達 make menuconfig ， 
+然後將NTFS 的選項設定成為模組，
+之後直接下達：make fs/ntfs/
+
+
+打开.config，有许多XXXX=m的项，这些都是要被编译为模块的项，因为我们不希望编
+译这些模块，所以要把XXXX=m的项统统去掉。然后再加上我们想要的模块，将
+#CONFIG_NTFS_FS is not set 改为CONFIG_NTFS_FS=m 当然，可以用你熟悉各种工具来做这件事,
+运行命令make modules来编译我们想要的NTFS模块
+
+
+
+有些模块和其他模块有依赖关系。如果你不熟悉这些依赖关系的话，
+建议你在.config去掉不用的模块选项后，通过make menuconfig来加上自己想要的模块。
+=============================================================================================================
+/lib/modules/`uname -r`/modules.dep
+/lib/modules/`uname -r`/modules.pcimap
+
+/lib/modules/`uname -r`/build 
+/lib/modules/`uname -r`/source                       ---->這兩個連結檔來指向正確的核心原始碼放置目錄
+
+
+/etc/modules
+
+
+///etc/modprobe.conf
+/etc/modprobe.d/*
+		alias my-mod really_long_modulename 　　配置文件里的别名优先自带的别名
+		options modulename option...　　　　　　　　　　an option for the module itself, for  an
+				　　　　　　　　　　　　　　　　　　　　　 alias, and on the command line.被叠加
+		alias eth0 ne
+		alias eth1 ne
+		options eth0 io=0x300 irq=5
+		options eth1 io=0x320 irq=7
+
+		install fred　/sbin/modprobe barney; /sbin/modprobe --ignore-install  fred                -->install no depandance module first
+		install fred /sbin/modprobe barney; /sbin/modprobe --ignore-install  fred $CMDLINE_OPTS  -->modprobe fred opt=1时，这个opt=1参数将被传递给模块，
+		               									 	    它将取代$CMDLINE_OPTS.
+		install probe-ethernet  /sbin/modprobe  e100  || /sbin/modprobe eepro100                 -->make up modules, even not exist
+
+		remove fred /sbin/modprobe -r --ignore-remove fred && /sbin/modprobe  -r  barney
+		remove  probe-ethernet/sbin/modprobe -r eepro100 || /sbin/modprobe -r e100
+
+		blacklist modulename                                                                     -->黑名单上的模块意味着这些特殊模块的内部别名将会被忽略
 =============================================================================================================
 所有标识为__init的函数在连接的时候都放在.init.text这个区段内，
 此外，所有的__init函数在区段.initcall.init中还保存了一份函数指针，
@@ -82,16 +130,25 @@ request_module("char-major-%d-%d", MAJOR(dev), MINOR(dev));
 cat /proc/sys/kernel/modprobe                //request_module call the modprobe command in user space
        /sbin/modprobe
 =============================================================================================================
+还要注意的是lsmod显示的是模块名，而不是别名(alias)。
 lsmod =====>>cat /proc/modules 
 cat /sys/module/***/refcnt
 		   /sections
 		   /paramters*
 /proc/kallsyms    :对应着内核符号表，它记录了符号以及符号所在的内存地址
 
-depmod -b path -e -F version -a -A
-modprobe          :在加载某模块时，会同时加载该模块所依赖的其它模块
-modprobe          :加载的模块若以“modprobe -r filename”的方式卸载将同时卸载其依赖的模块。
-modinfo <模块名>  :可以获得模块的信息，包括模块作者、模块的说明、模块所支持的参数以及vermagic
+depmod [-b path] -e -F System.map  -a/-A [-n]  [forced_version]
+depmod		  :开机不会自动执行depmod
+		  :产生modules.dep和map文件的程序 //map文件将会被hotplug用到
+
+modinfo [-adln] [module_name|filename]
+
+modprobe <模块名>  <arguments>       :在加载某模块时，会同时加载该模块所依赖的其它模块,
+                                      If any arguments are given after the modulename, 
+                                      they are passed to the kernel (in  addition  to  any options listed in the configuration file).
+modprobe -r <模块名>                 :加载的模块若以“modprobe -r filename”的方式卸载将同时卸载其依赖的模块。
+modprobe -c <模块名>                 :-c 列出目前系統所有的模組
+modinfo <模块名>                     :可以获得模块的信息，包括模块作者、模块的说明、模块所支持的参数以及vermagic
 ============================================================================================================
 module_param(参数名,参数类型,参数读/写权限),               insmode（或modprobe）模块名 参数名=参数值
 module_param_array(数组名,数组类型,数组长,参数读/写权限), 　insmod或modprobe命令时，应使用逗号分隔输入的数组元素。
