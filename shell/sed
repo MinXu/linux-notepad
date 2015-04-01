@@ -1,1 +1,1 @@
-sudo sed s/^\(HostKey \/mnt\/rw\/ssh\/ssh_host_ecdsa_key\)/\0\nHostKey \/etc\/ssh\/ssh_host_ecdsa_key/ filepath
+sudo sed -i "s/^\(HostKey \/mnt\/rw\/ssh\/ssh_host_ecdsa_key\)/\0\nHostKey \/etc\/ssh\/ssh_host_ecdsa_key/" filepath
