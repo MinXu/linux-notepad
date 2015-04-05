@@ -11,7 +11,7 @@ dig -x domain      IP-->域名
 
 
 
-/etc/hosts         自定义  《域名--IP》对照表
+/etc/hosts         自定义  《IP--域名》对照表
 
 
 /etc/resolve.conf  当前（一次性临时） DNS 服务器地址
