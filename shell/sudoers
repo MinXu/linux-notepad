@@ -1,0 +1,16 @@
+# User privilege specification
+root ALL=(ALL) ALL
+1    2   3     5
+# Members of the admin group may gain root privileges
+%admin ALL=(ALL) NOPASSWD:ALL
+1      2   3     4        5
+
+
+1. user or %group (% is group)
+2. host machine name
+3. the user(or group) and use which user (ALL is root) run the command
+4. need not passwd, sudo use these command.
+5. commands
+
+
+
