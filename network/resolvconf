@@ -1,0 +1,26 @@
+nm-tools           查看网络信息，DNS，网卡驱动等
+
+
+nslookup domain    域名-->IP
+
+
+dig domain         域名--> IP
+
+
+dig -x domain      IP-->域名
+
+
+
+/etc/hosts         自定义  《域名--IP》对照表
+
+
+/etc/resolve.conf  当前（一次性临时） DNS 服务器地址
+
+
+/etc/resolvconf/resolv.conf.d/base     自定义 永久 DNS 服务器
+nameserver 8.8.8.8
+nameserver 8.8.4.4
+
+
+sudo resolvconf -u 生效 /etc/resolvconf/resolv.conf.d/base 修改
+cat /etc/resolve.conf 查看 /etc/resolvconf/resolv.conf.d/base 生效
