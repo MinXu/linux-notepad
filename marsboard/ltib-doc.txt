@@ -1,0 +1,187 @@
+sudo aptitude -y install gettext libgtk2.0-dev rpm bison m4 libfreetype6-dev
+sudo aptitude -y install libdbus-glib-1-dev liborbit2-dev intltool
+sudo aptitude -y install ccache ncurses-dev zlib1g zlib1g-dev gcc g++ libtool
+sudo aptitude -y install uuid-dev liblzo2-dev
+sudo aptitude -y install tcl dpkg
+
+
+BC  `dpkg --list`   package_manifest.txt
+
+
+cd L3.0.35_4.1.0_130816_sourc
+./install.sh
+
+cd ltib
+./ltib
+
+cp L3.0.35_4.1.0_130816_source/pkgs/*   /opt/freescale/pkgs/
+
+./ltib
+cd ltib/dist/lfs-5.1/wget/
+edit wget.spec --->add the --without-ssl to end of the configure line
+
+
+./ltib
+ln -s /usr/i686-linux-gnu/include/sys/types /usr/incluce/sys/tpyes
+
+
+./ltib
+
+
+>>>>>>>ubuntu.patch
+													copy this to a file  ubuntuPatch.patch.
+										 
+										run :
+										 
+										  patch -p1 <  ubuntuPatch.patch
+										 
+										This should help
+										
+										--- original/bin/Ltibutils.pm	2012-08-15 12:04:53.728901999 -0500
+										+++ ltib/bin/Ltibutils.pm	2012-08-15 12:12:01.916901781 -0500
+										@@ -562,7 +562,7 @@
+										     binutils         => 'ar --version 2>/dev/null',
+										     'gcc-c++'        => 'g++ --version 2>/dev/null',
+										     glibc            => 'ldd --version 2>/dev/null',
+										-    'glibc-devel'    => sub { -f '/usr/lib/libm.so' || -f '/usr/lib64/libm.so' || -f '/usr/lib32/libm.so' || -f '/usr/lib/x86_64-linux-gnu/libm.so' || -f '/usr/lib/i386-linux-gnu/libm.so' },
+										+    'glibc-devel'    => sub { -f '/usr/lib/libm.so' || -f '/usr/lib64/libm.so' || -f '/usr/lib32/libm.so' || -f '/usr/lib/x86_64-linux-gnu/libm.so' || -f '/usr/lib/i386-linux-gnu/libm.so' || -f '/usr/lib64/libz.so' },
+										     'glibc-headers'  => sub { -f '/usr/include/stdio.h' },
+										     'libstdc++' => sub {
+										             return system_nb(<<TXT) == 0;
+										@@ -585,6 +585,7 @@
+										     zlib         => sub { my @f = (glob('/usr/lib/libz.so*'),
+										                                    glob('/lib/libz.so*'),
+										                                    glob('/lib64/libz.so*'),
+										+				   glob('/lib/i386-linux-gnu/libz.so*'),
+										                                    glob('/usr/lib/i386-linux-gnu/libz.so*'),
+										                                    glob('/usr/lib32/libz.so*'),
+										                                    glob('/usr/lib/x86_64-linux-gnu/libz.so*') ); @f > 1 ? 1 : 0 },
+
+>>>>>>>busybox.patch
+										If you get busy box error: Solution for it as below
+										@ARGV = grep { `file $_` =~ m,ASCII C program text, } @ARGV;
+										to
+										@ARGV = grep { `file $_` =~ m,ASCII\s+.*text, } @ARGV;
+										on files:
+										<ltib>/dist/lfs-5.1/base_libs/base_libs.spec
+										<ltib>/dist/lfs-5.1/glibc/glibc-2.3.2.spec
+										<ltib>/dist/lfs-5.1/glibc/glibc.spec
+
+>>>>>>>mtd-utils.patch
+										Error 4: Error with mtd-utils package
+										If you are facing issue with installation of any package try installing it by using following command.
+										./ltib 每p package-name 每m prep
+										./ltib 每p package-name 每m scbuild
+										./ltib 每p package-name 每m scdeploy
+
+
+
+>>>>>>>LTIB悝炾捩暮
+										http://hi.baidu.com/wzl_lzw/item/80d07be64acc99b52f140b9f
+
+=======================================================================================================================
+5.1.2 Compiling System Images
+1. Execute the following instructions to compile u-boot image
+$ cd ~ /uboot-imx
+$ export ARCH=arm
+$ export CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-fsl-linux-gnueabi-
+$ make distclean
+$ make mx6q-marsboard_config
+$ make
+
+
+2. Execute the following instructions to compile kernel image
+$ export PATH=~/uboot-imx/tools:$PATH
+$ cd ~/kernel_imx
+$ echo $ARCH && echo $CROSS_COMPILE
+$ export ARCH=arm
+$ export CROSS_COMPILE=/opt/freescale/usr/local/gcc-4.6.2-glibc-2.13-linaro-multilib-2011.12/fsl-linaro-toolchain/bin/arm-fsl-linux-gnueabi-
+$ make imx6_marsboard_defconfig
+$ make uImage
+
+
+
+
+===========================================================================================================================
+embest-tech-->>embest_imx3.0.35_4.0.0
+repo: https://github.com/embest-tech/linux-imx
+
+http://www.embest-tech.cn/community/thread-8398-1-1.html
+
+http://patches.openembedded.org/patch/54255/
+
+
+
+
+
+
+root@freescale /opt/viv_samples/cl11/fft$ ./fft 128
+Block size: 16
+Print result: yes
+Initializing device(s)...
+Get the Device info and select Device...
+# of Devices Available = 1
+# of Compute Units = 4
+# compute units = 4
+Creating Command Queue...
+log2(fft size) = log2(128)=7
+Compiling  radix-2 FFT Program for GPU...
+creating radix-2 kernels...
+Creating kernel fft_radix2 0 (p=1)...
+Creating kernel fft_radix2 1 (p=2)...
+Creating kernel fft_radix2 2 (p=4)...
+Creating kernel fft_radix2 3 (p=8)...
+Creating kernel fft_radix2 4 (p=16)...
+Creating kernel fft_radix2 5 (p=32)...
+Creating kernel fft_radix2 6 (p=64)...
+Setting kernel args for kernel 0 (p=1)...
+Setting kernel args for kernel 1 (p=2)...
+Setting kernel args for kernel 2 (p=4)...
+Setting kernel args for kernel 3 (p=8)...
+Setting kernel args for kernel 4 (p=16)...
+Setting kernel args for kernel 5 (p=32)...
+Setting kernel args for kernel 6 (p=64)...
+running kernel 0 (p=1)...
+running kernel 1 (p=2)...
+running kernel 2 (p=4)...
+running kernel 3 (p=8)...
+running kernel 4 (p=16)...
+running kernel 5 (p=32)...
+running kernel 6 (p=64)...
+Kernel execution time on GPU (kernel 0) :   0.000004 seconds
+Kernel execution time on GPU (kernel 1) :   0.000004 seconds
+Kernel execution time on GPU (kernel 2) :   0.000003 seconds
+Kernel execution time on GPU (kernel 3) :   0.000004 seconds
+Kernel execution time on GPU (kernel 4) :   0.000003 seconds
+Kernel execution time on GPU (kernel 5) :   0.000003 seconds
+Kernel execution time on GPU (kernel 6) :   0.000004 seconds
+Total Kernel execution time on GPU :   0.000025 seconds
+Successful.
+
+
+CAN>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+	 ip link set can0 up type can bitrate 500000
+	 ifconfig can0 up
+	 ip -details -statistic link show can0
+	
+	 ip link set can1 up type can bitrate 125000
+	 ifconfig can1 up 
+	 ip -details -statistic link show can1
+ 
+GPU >>>>>
+mv /usr/lib/arm-linux-gnueabihf/mesa /usr/lib/arm-linux-gnueabihf/mesa_bak
+mv /usr/lib/arm-linux-gnueabihf/mesa-egl /usr/lib/arm-linux-gnueabihf/mesa-egl_bak
+
+ln -s /lib/ld-linux-armhf.so.3  /lib/ld-linux.so.3
+
+dpkg -X gpu-viv-imx6q-3.0.34_4.0.0.deb ~/lib
+
+sudo tar --numeric-owner --strip-components 3 每xzvf /<path>/ linaro-precise-alip-20121124-519.tar.gz
+
+
+
+ apt-get build-dep ntp
+ apt-get source ntp
+ dpkg-buildpackage -b
+
+ltib -m prep -p imx-test

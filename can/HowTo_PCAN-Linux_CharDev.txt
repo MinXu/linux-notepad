@@ -1,0 +1,210 @@
+HowTo...
+ Download and Install the PEAK-System LINUX CAN Driver as CharDev Device and run all included samples
+
+What to do up in front:
+* Be sure you have root previleges to install the driver and copy the libs
+* Be sure you have update your system (apt-get update)
+* Be sure you have basic LINUX knwoledge 
+
+Login to your system
+Go to your home directory
+Create a directory for the files (for example PEAK-Linux) by call
+
+$ mkdir PEAK-Linux
+$ cd PEAK-Linux
+
+Download the PCAN-Linux PDF manual (and also read it!)
+wget http://www.peak-system.com/produktcd/Develop/PC%20interfaces/Linux/PCAN-Linux%20Driver/PCAN-Driver_for_Linux_eng.pdf
+
+------------------------------------------------------------------------------------------
+Step1 - download and install the driver
+
+Download the PEAK-Linux driver package
+(Take care to use the latest Version - so replace the x with the current version example: peak-linux-driver-7.14.tar.gz)
+
+$ wget http://www.peak-system.com/produktcd/Develop/PC%20interfaces/Linux/PCAN-Linux%20Driver/peak-linux-driver-x.x.tar.gz
+
+Unpack packages
+$ tar -xzf peak-linux-driver-x.x.tar.gz
+
+
+Change to the driver directory
+$ cd peak-linux-driver-7.14
+
+Call make with your needed settings
+For example build for CharDev (NET=NO) and without ISA/Dongle/PCI and PC Card Support - only USB
+$ make all NET=NO PCI=NO ISA=NO DNG=NO PCC=NO
+
+When you get the error "popt.h not found", please call
+$ sudo apt-get install libpopt-dev
+and call the make again
+
+After that install the driver and lib by calling 
+$ sudo make install
+and 
+$ modprobe pcan
+
+Check if the driver is installed, and if your interface is connected (be sure your USB CAN Interface is plugged in!)
+$ cat /proc/pcan
+$
+$ *------------- PEAK-System CAN interfaces (www.peak-system.com) -------------
+$ *------------- Release_20130814_n (7.9.0) Jan  9 2014 11:17:31 --------------
+$ *---------------------------- [mod] [par] [usb] -----------------------------
+$ *--------------------- 2 interfaces @ major 251 found -----------------------
+$ *n -type- ndev --base-- irq --btr- --read-- --write- --irqs-- -errors- status
+$ 32    usb -NA- 00000002 001 0x001c 00000000 00000000 00000000 00000000 0x0000
+$ 33    usb -NA- 00000007 017 0x001c 00000000 00000000 00000000 00000000 0x0000
+
+You see 2 installed PCAN-USB on the CharDev driver running on a Baud rate of 500K (BTR0/BTR1 001C)
+
+Run receivetest 
+
+$ /usr/local/bin/receivetest 
+
+$ receivetest Version "Release_20090203_n"  (www.peak-system.com)
+$ ------- Copyright (C) 2004-2009 PEAK System-Technik GmbH ------
+$ receivetest comes with ABSOLUTELY NO WARRANTY.     This is free
+$ software  and you are welcome  to redistribute it under certain
+$ conditions.   For   details   see    attached   COPYING   file.
+$ 
+$ receivetest: device node="/dev/pcan0"
+$              Only standard frames are accepted, init with 500 kbit/sec.
+$ receivetest: driver version = Release_20130814_n
+$ 190860.244 receivetest: m s 0x00000032 7 02 02 00 30 04 00 00 
+$ 206244.650 receivetest: m s 0x00000123 3 12 23 45 
+$ 207724.714 receivetest: m s 0x00000032 7 02 02 00 30 04 00 00 
+$ 208316.671 receivetest: m s 0x00000123 3 12 23 45 
+$ 217556.948 receivetest: m s 0x00000456 3 03 02 01 
+$ 219700.948 receivetest: m s 0x00000032 7 02 02 00 30 04 00 00$
+
+------------------------------------------------------------------------------------------
+Step2 - download and install the PCAN-Basic for Linux (skip if you do not want to use API)
+
+Download the PEAK-Linux PCAN-Basic package (be sure you are in the directory you created for the PEAK stuff!)
+Always use the latest Version - so replace the x with the current version example: PCAN_Basic_Linux-2.0.3tar.gz
+$ wget http://www.peak-system.com/produktcd/Develop/PC%20interfaces/Linux/PCAN-Basic_API_for_Linux/PCAN_Basic_Linux-x.x.xtar.gz
+
+Unpack packages
+$ tar -xzf PCAN_Basic_Linux-x.x.x.tar.gz
+
+Change to the unpacked files and the LIB directory
+$ cd PCAN_Basic_Linux-2.0.3/pcanbasic
+
+Call make 
+$ make all 
+
+After that install the lib by calling 
+$ sudo make install
+
+Compile the c++ /phyton sample
+$ cd sample
+$ make all
+and run a simple receive test
+$ cd c++
+$ ./pcaneventread 
+Initialize CAN: 0
+  - R ID: 123 LEN:3 DATA:12 23 45 00 00 00 00 00
+  - R ID: 456 LEN:3 DATA:03 02 01 00 00 00 00 00
+  - R ID: 123 LEN:3 DATA:12 23 45 00 00 00 00 00
+  - R ID:  32 LEN:7 DATA:02 02 00 30 04 00 00 00
+  - R ID: 123 LEN:3 DATA:12 23 45 00 00 00 00 00
+
+To run the Python sample you need the Tkinter package
+$ apt-get install python-tk
+and the Tix
+$ apt-get install Tix (TK extension library)
+then run the sample (need GUI/X-Windows)
+$ python PCANBasicExample.pyw
+
+------------------------------------------------------------------------------------------
+Step 3 - compile and run sample code
+
+After a successful compiling and installing the PEAK CharDev Linux drivers and the PCAN-Basic Linux lib, 
+on a DEBIAN based Distribution (Ubuntu, MintOS etc.), you could compile and run samples with graphical Interface.
+
+For that you need to install the following packages. 
+**
+If you are not sure what you are doing - stop here - use Google and read manuals.
+**
+We could no support by setup your Environment - if you have any problem to get this things work on you System, please ask the community / read more manual.
+
+
+I.)
+Install Basic Development Environment- follow this instruction:
+https://wiki.gnome.org/DeveloperTools/Installation/Ubuntu
+
+$ sudo apt-get install g++
+
+If you want to use our PCAN-View for Linux example you need the GTK+2:
+$ sudo apt-get install gtk+2.0
+$ wget http://www.peak-system.com/cupd2/PCAN-View-LINUX-GTK+.tar.gz 
+
+NOTICE - this download link will no longer available - ask for this file at support@peak-system.com
+
+$ tar -xzf PCAN-View-LINUX-GTK+.tar.gz
+$ cd pcanview
+$ make all
+
+and run the tool (need GUI/X-Windows)
+$ ./pcanview
+
+
+II.)
+Recommended Development Tools (incl GTK+ Development)
+
+anjuta - Integrated development environment (or use your favorite IDE or text editor)
+glade - Interface designer
+devhelp - API Browser
+
+$ sudo apt-get install anjuta glade devhelp
+
+For Phyton:
+$ sudo apt-get install python python-gobject
+
+If you want to use the newer GTK+3 download these packages
+
+$ sudo apt-get install gstreamer0.10-plugins-bad gstreamer0.10-plugins-bad-multiverse 
+$ sudo apt-get install libgtk-3-doc gstreamer0.10-doc libclutter-1.0-doc libgda-5.0-doc
+$ sudo apt-get install libgtk-3-dev libgstreamer0.10-dev libclutter-1.0-dev libwebkitgtk-3.0-dev libgda-5.0-dev
+$ sudo apt-get install libgtkmm-3.0-dev libgstreamermm-0.10-dev libgdamm5.0-dev
+
+Docu:
+$ sudo apt-get install libgtkmm-3.0-doc libgstreamermm-0.10-doc libgdamm5.0-doc
+
+
+III.)
+For Java Development:
+
+Install JAVA JDK/JRE
+(see http://www.webupd8.org/2012/01/install-oracle-java-jdk-7-in-ubuntu-via.html)
+
+sudo add-apt-repository ppa:webupd8team/java
+sudo apt-get update
+sudo apt-get install oracle-java7-installer
+
+
+IV.) 
+To automatically set up the Java 7 environment variables, you can install the following package:
+sudo apt-get install oracle-java7-set-default
+
+
+V.)
+To Edit the Java sample incl. graphical Interface
+Install NetBeans 7.x or eclipse
+Before you could use the PCAN-Basic for JAVA Interface you need to compile and install the JNI first (Java Native Interface)
+The source could be found in the PCAN_Basic_Linux package in the Subdirectory pcanjni
+
+!Please check if the Java Version you use fit to the project settings!
+Change in the make file the JAVA_HOME to your installed environment
+For example:
+JAVA_HOME = /usr/lib/jvm/java-7-oracle
+
+After that call 
+$ make all
+$ make install 
+to build and install the JNI Lib
+
+
+VI.)
+To remove the JAVA JDK7 
+$ sudo apt-get remove oracle-java7-installer
