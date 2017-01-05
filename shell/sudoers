@@ -8,9 +8,13 @@ root ALL=(ALL) ALL
 
 1. user or %group (% is group)
 2. host machine name
-3. the user(or group) and use which user (ALL is root) run the command
+3. the user(or group) use which user (ALL is root) run the command
 4. need not passwd, sudo use these command.
-5. commands
+5. commands, must use the absolut 
 
 
+
+eg.
+jorge ALL=(root) /usr/bin/find, /bin/rm
+jorge作为超级用户运行 /usr/bin/find和 /bin/rm这两个命令。需要指出的是，这里列出的命令一定要使用绝对路径。
 

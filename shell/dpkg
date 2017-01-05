@@ -38,8 +38,8 @@ dpkg-reconfigure --frontend=dialog debconf (如果你安装时选错了，这里
 debconf --set-selections*********
  
 ====================================================================================================================================================
-echo “<package> hold” | dpkg –set-selections
+echo “<package> hold” | dpkg --set-selections
 #设置 <package> 的状态为 hlod (命令行方式)
 
-dpkg –get-selections “<package>”
+dpkg --get-selections “<package>”
 #取的 <package> 的当前状态 (命令行方式)
